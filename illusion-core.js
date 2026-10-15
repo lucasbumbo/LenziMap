@@ -249,10 +249,12 @@
   var ROOM_WALLS = ['back', 'left', 'right', 'floor', 'ceiling'];
   var WALL_LABEL = { back: 'Fundo', left: 'Parede esquerda', right: 'Parede direita', floor: 'Chão', ceiling: 'Teto' };
   var MAX_SPRITES = 12;
+  // Sala contínua na quina: duas faces vizinhas (na ordem do anel frente, direita, trás, esquerda) mostram UMA sala só, vista do mesmo ponto.
+  var JOINS = { 'front+right': { a: 'front', b: 'right', ang: 0 }, 'right+back': { a: 'right', b: 'back', ang: 90 }, 'back+left': { a: 'back', b: 'left', ang: 180 }, 'left+front': { a: 'left', b: 'front', ang: 270 } };
   function defaultRoom() {
     var w = {};
     ROOM_WALLS.forEach(function (k) { w[k] = { on: k !== 'ceiling', d: 0, color: '#1a1d2e', media: null }; });
-    return { walls: w, sprites: [] };
+    return { walls: w, sprites: [], join: null };
   }
   function cleanMedia(m) {
     if (!m || typeof m !== 'object') return null;
@@ -279,6 +281,7 @@
       d.sprites.push({ id: id, name: typeof q.name === 'string' ? q.name.slice(0, 40) : 'Objeto', x: clamp(num(q.x, 0), -60, 60), y: clamp(num(q.y, 0), -60, 60), z: clamp(num(q.z, -20), -600, 60), size: clamp(num(q.size, 6), 0.5, 80), media: cleanMedia(q.media), fx: q.fx === 'float' ? 'float' : '' });
     });
     if (Array.isArray(r.sprites) && r.sprites.length > MAX_SPRITES) warnings && warnings.push('Máximo de ' + MAX_SPRITES + ' objetos por sala.');
+    d.join = typeof r.join === 'string' && JOINS[r.join] ? r.join : null;
     return d;
   }
 
@@ -635,6 +638,36 @@
     });
   }
 
+  // Sala contínua na quina. Coordenadas do par (frente + direita = ângulo 0): o cubo fica na origem, as janelas são os planos z = +h e x = +h
+  // e a sala continua pra dentro (-x, -z) até a profundidade D. As outras quinas giram essa mesma cena em volta do eixo vertical.
+  function buildJoined(il, P, t, x, out, quads) {
+    var R = il.room, W = R.walls, h = x.h, D = P.depth, sp = P.spacing, th = P.thick, n = Math.min(60, Math.ceil(D / sp) + 1), k;
+    function wallCol(key, alt) { return shade(hex(W[key].color), alt); }
+    var gl = shade(x.c1, 0.35), wire = x.wall === 'grid', tt = th * 0.35;
+    if (W.back.on) {
+      if (W.back.media) quads.push({ p: [h - D / 2, 0, h - D], r: [0, 0, 0], s: [D, 2 * h, 1], m: W.back.media, solid: true, a: 1, id: 'wall:back' });
+      else out.push(prim('quad', [h - D / 2, 0, h - D], null, [D, 2 * h, 1], wallCol('back', 1), { e: 0 }));
+      if (wire && !W.back.media) for (k = 0; k < n; k++) { var xv = h - k * sp; out.push(prim('box', [xv, 0, h - D + 0.05], null, [tt, 2 * h, tt], gl, { e: 1 })); }
+      if (wire && !W.back.media) for (k = 1; k * sp < 2 * h; k++) out.push(prim('box', [h - D / 2, -h + k * sp, h - D + 0.05], null, [D, tt, tt], gl, { e: 1 }));
+    }
+    if (W.right.on) {
+      if (W.right.media) quads.push({ p: [h - D, 0, h - D / 2], r: [0, 90, 0], s: [D, 2 * h, 1], m: W.right.media, solid: true, a: 1, id: 'wall:right' });
+      else out.push(prim('quad', [h - D, 0, h - D / 2], [0, 90, 0], [D, 2 * h, 1], wallCol('right', 0.85), { e: 0 }));
+      if (wire && !W.right.media) for (k = 0; k < n; k++) { var zv = h - k * sp; out.push(prim('box', [h - D + 0.05, 0, zv], null, [tt, 2 * h, tt], gl, { e: 1 })); }
+      if (wire && !W.right.media) for (k = 1; k * sp < 2 * h; k++) out.push(prim('box', [h - D + 0.05, -h + k * sp, h - D / 2], null, [tt, tt, D], gl, { e: 1 }));
+    }
+    function flat(key, y, rot, flipV, alt) {
+      if (!W[key].on) return;
+      if (W[key].media) quads.push({ p: [h - D / 2, y, h - D / 2], r: [rot, 0, 0], s: [D, D, 1], m: W[key].media, solid: true, a: 1, flipV: flipV, id: 'wall:' + key });
+      else out.push(prim('quad', [h - D / 2, y, h - D / 2], [rot, 0, 0], [D, D, 1], wallCol(key, alt), { e: 0 }));
+      if (wire && !W[key].media) for (k = 0; k < n; k++) {
+        out.push(prim('box', [h - D / 2, y, h - k * sp], null, [D, tt, tt], gl, { e: 1 }));
+        out.push(prim('box', [h - k * sp, y, h - D / 2], null, [tt, tt, D], gl, { e: 1 }));
+      }
+    }
+    flat('floor', -h, -90, false, 0.7); flat('ceiling', h, 90, true, 0.7);
+  }
+
   function buildScene(il, ill, t, h) {
     var P = effective(il, ill), out = [], quads = [], st = il.style, pr = PRESETS[il.preset];
     var x = { h: h, c1: hex(st.color1), c2: hex(st.color2), wall: st.wall, style: st };
@@ -646,7 +679,7 @@
       case 'object-inside': buildObject(P, t, x, out, false); break;
       case 'object-emerging': buildObject(P, t, x, out, true); break;
       case 'mechanical-interior': buildMechanical(P, t, x, out); break;
-      case 'room-builder': buildBuilder(il, P, t, x, out, quads); break;
+      case 'room-builder': if (il.room && il.room.join && JOINS[il.room.join]) buildJoined(il, P, t, x, out, quads); else buildBuilder(il, P, t, x, out, quads); break;
     }
     return { prims: out, quads: quads, scope: pr.scope, clip: pr.clip, params: P };
   }
@@ -678,9 +711,18 @@
         eye = [base[0] + frame.r[0] * P.camx + frame.u[0] * P.camy + nn[0] * P.camz, base[1] + frame.r[1] * P.camx + frame.u[1] * P.camy + nn[1] * P.camz, base[2] + frame.r[2] * P.camx + frame.u[2] * P.camy + nn[2] * P.camz];
       }
     }
-    var pr = PRESETS[il.preset], scope = pr.scope;
-    var local = scope === 'face' ? frame : cubeFrame(cube);
+    // Sala contínua: as duas faces da quina olham a mesma sala do mesmo ponto (a 45 graus entre as duas faces, na distância e altura do público).
+    var jn = hit && il.preset === 'room-builder' && il.room && il.room.join ? JOINS[il.room.join] : null, joined = !!(jn && (hit.face === jn.a || hit.face === jn.b));
+    if (joined) {
+      var na = FACE_AXES[jn.a].n, nb = FACE_AXES[jn.b].n, cd = rotYv([na[0] + nb[0], 0, na[2] + nb[2]], cube.rotY), cl = Math.sqrt(cd[0] * cd[0] + cd[2] * cd[2]) || 1;
+      var vv2 = stage.viewer.pos, hd2 = Math.max(60, Math.min(400, Math.sqrt((vv2[0] - cube.pos[0]) * (vv2[0] - cube.pos[0]) + (vv2[2] - cube.pos[2]) * (vv2[2] - cube.pos[2]))));
+      var cdr = rotYv([cd[0] / cl, 0, cd[2] / cl], -((il.camera && il.camera.yaw) || 0)), tlt = ((il.camera && il.camera.tilt) || 0) * D2R;
+      eye = [cube.pos[0] + cdr[0] * hd2, vv2[1] + hd2 * Math.tan(tlt), cube.pos[2] + cdr[2] * hd2];
+    }
+    var pr = PRESETS[il.preset], scope = joined ? 'cube' : pr.scope;
+    var local = joined ? { M: m4mul(cubeFrame(cube).M, trs([0, 0, 0], [0, jn.ang, 0], [1, 1, 1])) } : (scope === 'face' ? frame : cubeFrame(cube));
     var scene = buildScene(il, ill, t, frame.half);
+    if (joined) scene.scope = 'cube';
     var cam = faceCamera(frame, eye, pr.clip, Math.max(400, P.depth * 3 + 200));
     return { free: free, frame: frame, local: local, eye: eye, cam: cam, scene: scene, cube: cube, face: hit ? hit.face : 'front' };
   }
@@ -691,7 +733,7 @@
     defaultStage: defaultStage, fixStage: fixStage, viewerFromMeasures: viewerFromMeasures, measuresFromViewer: measuresFromViewer, viewerAdvice: viewerAdvice, cubeById: cubeById, faceFrame: faceFrame, cubeFrame: cubeFrame, visibleFrom: visibleFrom, findFace: findFace,
     faceCamera: faceCamera, projectToFace: projectToFace,
     defaultParams: defaultParams, defaultIllusion: defaultIllusion, validate: validate, migrateIllusion: migrateIllusion, stageVersionWarning: stageVersionWarning, validateKeys: validateKeys, effective: effective,
-    buildScene: buildScene, ROOM_WALLS: ROOM_WALLS, WALL_LABEL: WALL_LABEL, MAX_SPRITES: MAX_SPRITES, defaultRoom: defaultRoom, resolveFace: resolveFace, hex: hex,
+    buildScene: buildScene, ROOM_WALLS: ROOM_WALLS, JOINS: JOINS, WALL_LABEL: WALL_LABEL, MAX_SPRITES: MAX_SPRITES, defaultRoom: defaultRoom, resolveFace: resolveFace, hex: hex,
     m: { ident: ident, mul: m4mul, pt: m4pt, dir: m4dir, trs: trs, rot: rotM, frustum: frustum, perspective: perspective, lookAt: lookAt },
     v: { add: add, sub: sub, mul: mul, dot: dot, cross: cross, len: len, norm: norm },
     rig: null,

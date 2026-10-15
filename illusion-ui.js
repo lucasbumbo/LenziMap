@@ -129,14 +129,42 @@
   // ---------- modo fácil: 1) escolher a face  2) empurrar o fundo  3) paredes ----------
   // Cada face tem a sua própria configuração (paredes, profundidade, girar) e o seu próprio clipe na timeline.
   function faceKey(il) { return il.target.cube + ':' + (il.target.faces[0] || 'front'); }
+  function isJoined() { return !!(S.il && S.il.room && S.il.room.join && C.JOINS[S.il.room.join]); }
+  function stashFace() {
+    if (!S.il) return;
+    var ent = { il: S.il, assetId: S.assetId }, k0 = S.il.target.cube + ':';
+    if (isJoined()) { var J = C.JOINS[S.il.room.join]; S.faceIl[k0 + J.a] = ent; S.faceIl[k0 + J.b] = ent; } else S.faceIl[faceKey(S.il)] = ent;
+  }
+  function freeSurfaceKey() {
+    var used = {}; stage().cubes.forEach(function (c) { C.FACES.forEach(function (g) { if (c.faces[g]) used[c.faces[g]] = 1; }); });
+    var free = H.surfaces().map(function (z) { return z.s.key; }).filter(function (kk) { return kk && !used[kk]; });
+    return free[0] || null;
+  }
+  function dropAsset(id) { if (!id) return; H.checkpoint('il-remove'); T.removeAll(seq(), id); H.syncClock(); H.renderAll(); }
+  // Sala contínua na quina: duas faces vizinhas mostram uma sala só. Troca de configuração: tira o clipe antigo, e o Aplicar cria de novo.
+  function setJoin(key) {
+    var st = stage(), cube = C.cubeById(st, S.il.target.cube) || st.cubes[0], f0 = curFace(), J = key ? C.JOINS[key] : null, k0 = cube.id + ':';
+    if (!isJoined()) { var oth = J ? (J.a === f0 ? J.b : J.a) : null; if (oth && S.faceIl[k0 + oth]) { dropAsset(S.faceIl[k0 + oth].assetId); delete S.faceIl[k0 + oth]; } }
+    else { var O = C.JOINS[S.il.room.join]; delete S.faceIl[k0 + O.a]; delete S.faceIl[k0 + O.b]; }
+    if (S.assetId) { dropAsset(S.assetId); S.assetId = null; }
+    if (J) { S.il.room.join = key; S.il.target.faces = [J.a, J.b]; S.msg = 'Sala contínua nas faces ' + C.FACE_LABEL[J.a] + ' e ' + C.FACE_LABEL[J.b] + '. Aperte Aplicar na Timeline.'; }
+    else { S.il.room.join = null; S.il.target.faces = [f0]; S.msg = 'Face ' + C.FACE_LABEL[f0] + ' sozinha de novo. Aperte Aplicar na Timeline.'; }
+    stashFace();
+    var miss = [];
+    S.il.target.faces.forEach(function (g) { if (!C.cubeById(stage(), cube.id).faces[g]) { var kk = freeSurfaceKey(); if (kk) bindSurface(cube.id, g, kk); else miss.push(C.FACE_LABEL[g]); } });
+    if (miss.length) S.msg += ' Falta tela livre para: ' + miss.join(', ') + '.';
+    render();
+  }
+  function curFace() { var f = S.il.target.faces[0] || 'front'; return S.il.target.faces.indexOf(S.curFace) >= 0 ? S.curFace : f; }
   function selectFace(cubeId, f) {
+    S.curFace = f;
     var st = stage(), cube = C.cubeById(st, cubeId) || st.cubes[0];
-    if (S.il) S.faceIl[faceKey(S.il)] = { il: S.il, assetId: S.assetId };
+    stashFace();
     var it = S.faceIl[cube.id + ':' + f];
     if (it && it.assetId && !T.illusionOf(seq(), it.assetId)) it.assetId = null;
     if (it) { S.il = it.il; S.assetId = it.assetId; }
     else { newIllusion('room-builder'); S.il.camera.view = 'free'; S.il.camera.yaw = 0; S.il.camera.tilt = 0; }
-    S.il.target.cube = cube.id; S.il.target.faces = [f];
+    S.il.target.cube = cube.id; if (!isJoined()) S.il.target.faces = [f];
     if (!cube.faces[f]) {
       var used = {}; st.cubes.forEach(function (c) { C.FACES.forEach(function (g) { if (c.faces[g]) used[c.faces[g]] = 1; }); });
       var free = H.surfaces().map(function (z) { return z.s.key; }).filter(function (kk) { return kk && !used[kk]; });
@@ -180,23 +208,33 @@
     return b;
   }
   function secEasy3d() {
-    var f0 = S.il.target.faces[0] || 'front', b = box('r3d', 'Face ' + C.FACE_LABEL[f0] + ': girar o 3D e camadas (fundo, lados, chão, teto)'), R = S.il.room;
+    var f0 = curFace(), jn = isJoined() ? C.JOINS[S.il.room.join] : null, R = S.il.room;
+    var b = box('r3d', jn ? 'Sala contínua: ' + C.FACE_LABEL[jn.a] + ' + ' + C.FACE_LABEL[jn.b] : 'Face ' + C.FACE_LABEL[f0] + ': girar o 3D e camadas (fundo, lados, chão, teto)');
     S.rcv = null;
+    var ring = ['front', 'right', 'back', 'left'], ix = ring.indexOf(f0);
+    if (ix >= 0) {
+      var kn = ring[ix] + '+' + ring[(ix + 1) % 4], kp = ring[(ix + 3) % 4] + '+' + ring[ix];
+      b.appendChild(selectRow('Sala contínua na quina', [['', 'Não, só esta face'], [kn, 'Com a face ' + C.FACE_LABEL[ring[(ix + 1) % 4]]], [kp, 'Com a face ' + C.FACE_LABEL[ring[(ix + 3) % 4]]]], function () { return R.join || ''; }, function (v) { setJoin(v); }, 'il-join'));
+      if (jn) b.appendChild(el('p', 'il-note', 'As duas faces mostram uma sala só, vista de um ponto na quina (45 graus entre elas). Girar o 3D move esse ponto.'));
+    }
     slider(b, 'Girar o 3D (graus, esquerda/direita)', function () { return S.il.camera.yaw || 0; }, function (v) { S.il.camera.yaw = v; changed('il-cam'); }, -80, 80, 1);
     slider(b, 'Inclinar o 3D (graus, cima/baixo)', function () { return S.il.camera.tilt || 0; }, function (v) { S.il.camera.tilt = v; changed('il-cam'); }, -60, 60, 1);
     var P = C.PARAMS.depth;
     slider(b, 'Profundidade do fundo (pol)', function () { return S.il.params.depth; }, function (v) { S.il.params.depth = v; changed('il-p:depth'); }, P.min, P.max, P.step, { kf: 'depth' });
+    var label = { back: 'Fundo', left: 'Parede esquerda', right: 'Parede direita', floor: 'Chão', ceiling: 'Teto' };
+    if (jn) { label.back = 'Parede do fundo (direita)'; label.right = 'Parede do fundo (esquerda)'; }
     C.ROOM_WALLS.forEach(function (k) {
+      if (jn && k === 'left') return;
       var w = R.walls[k], row = el('div', 'il-row'); row.dataset.wall = k;
-      var cb = el('input'); cb.type = 'checkbox'; cb.checked = w.on; cb.id = 'il-wall-' + k; cb.setAttribute('aria-label', C.WALL_LABEL[k]);
+      var cb = el('input'); cb.type = 'checkbox'; cb.checked = w.on; cb.id = 'il-wall-' + k; cb.setAttribute('aria-label', label[k]);
       cb.addEventListener('change', function () { w.on = cb.checked; changed('il-room', true); });
-      var lb = el('label'); lb.appendChild(cb); lb.appendChild(document.createTextNode(' ' + C.WALL_LABEL[k])); lb.style.minWidth = '112px'; row.appendChild(lb);
-      var col = el('input'); col.type = 'color'; col.value = w.color; col.id = 'il-wallc-' + k; col.title = 'Cor da parede'; col.setAttribute('aria-label', 'Cor: ' + C.WALL_LABEL[k]);
+      var lb = el('label'); lb.appendChild(cb); lb.appendChild(document.createTextNode(' ' + label[k])); lb.style.minWidth = '112px'; row.appendChild(lb);
+      var col = el('input'); col.type = 'color'; col.value = w.color; col.id = 'il-wallc-' + k; col.title = 'Cor da parede'; col.setAttribute('aria-label', 'Cor: ' + label[k]);
       col.addEventListener('input', function () { w.color = col.value; changed('il-room-c'); });
       row.appendChild(col);
       row.appendChild(mediaPicker(w.media, function (m) { w.media = m; changed('il-room', true); }, 'il-wallm-' + k));
       b.appendChild(row);
-      if (w.on && k !== 'back') slider(b, C.WALL_LABEL[k] + ': profundidade para dentro (pol)', function () { return w.d; }, function (v) { w.d = v; changed('il-room-d'); }, 0, 14, 0.5);
+      if (!jn && w.on && k !== 'back') slider(b, C.WALL_LABEL[k] + ': profundidade para dentro (pol)', function () { return w.d; }, function (v) { w.d = v; changed('il-room-d'); }, 0, 14, 0.5);
     });
     return b;
   }
