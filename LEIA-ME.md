@@ -191,6 +191,12 @@ Na aba **3D** agora abre direto o modo fácil:
 3. **Paredes e objetos**: marque Fundo, Parede esquerda, Parede direita, Chão e Teto, escolha cor e imagem ou GIF de cada uma, e adicione objetos (um bichinho em GIF, por exemplo).
 Depois, **Aplicar na Timeline**. Os tipos de ilusão, câmera, luz e geometria do palco ficam em **Mostrar opções avançadas** (no fim do painel). A escolha fica guardada.
 
+## 1.0.6 - projetor na quina
+- Novo passo "2. De onde o público vê (perspectiva)" no modo fácil: botões De frente, Quina direita (Frente + Direita) e Quina esquerda (Esquerda + Frente).
+- Nas quinas as duas faces usam o mesmo ponto de vista, a 45 graus, então a animação continua de uma face para a outra.
+- Ajustes finos: Ângulo do público (-85 a 85 graus), Distância (mais perto = perspectiva mais forte) e Altura do olho.
+- Escolher a quina já liga uma tela livre em cada face. Aplicar na Timeline cria um clipe por face.
+
 ## 1.0.5 - cada face com a própria perspectiva
 - Direita, Esquerda, Trás e Topo agora são desenhadas como se o público estivesse de frente para elas (mesma distância e altura do olho). Antes dependiam do ponto de vista da frente e saíam vazias ou achatadas.
 - A Frente continua usando o ponto de vista do público. Se o público já enxerga a face com folga, nada muda.
