@@ -14,8 +14,12 @@ let fails=0,n=0;function assert(c,m){n++;if(c)console.log('PASS '+m);else{fails+
  assert(f.left===keys[1]&&f.front===null,'ligar a mesma superfície em outra face tira da primeira ('+JSON.stringify(f)+')');
  // face direita marcada com o público no centro: não dá para ver
  await p.check('#il-face-right');await p.waitForTimeout(300);
- const warns=await p.locator('.il-warn').allTextContents();
- assert(warns.some(t=>/não dá para ver a face/.test(t)&&/Direita/.test(t)),'avisa que a face Direita não é visível do público');
+ let warns=await p.locator('.il-warn').allTextContents();
+ assert(!warns.some(t=>/não dá para ver a face/.test(t)),'com perspectiva própria a face Direita não gera aviso de invisível');
+ await p.evaluate(()=>{window.IllusionUI.state.il.camera.assist=false;window.IllusionUI.render();});await p.waitForTimeout(300);
+ warns=await p.locator('.il-warn').allTextContents();
+ assert(warns.some(t=>/não dá para ver a face/.test(t)&&/Direita/.test(t)),'com a perspectiva própria desligada avisa que a face Direita não é visível do público');
+ await p.evaluate(()=>{window.IllusionUI.state.il.camera.assist=true;window.IllusionUI.render();});await p.waitForTimeout(200);
  // projeto antigo com a mesma superfície em duas faces: o painel avisa
  await p.evaluate((k)=>{const s=window.TimelineUI._h.tl.seq;s.stage.cubes[0].faces.front=k;s.stage.cubes[0].faces.left=k;window.IllusionUI&&window.IllusionUI.refresh&&window.IllusionUI.refresh();},keys[1]);
  await p.evaluate(()=>window.IllusionUI.render());await p.waitForTimeout(300);

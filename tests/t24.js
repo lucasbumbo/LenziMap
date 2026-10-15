@@ -11,6 +11,7 @@ let fails=0,n=0;function assert(c,m){n++;if(c)console.log('PASS '+m);else{fails+
   out.old=C.validate({v:C.VERSION,preset:'infinite-tunnel',camera:{view:'audience',fov:35}},null).value.camera.assist;
   out.on=[0.2,0.7,1.2,1.7,2.2,2.7].map(t=>lit(mk(true),'top',t));
   out.off=[0.2,0.7,1.2,1.7,2.2,2.7].map(t=>lit(mk(false),'top',t));
+  out.sides=['right','left','back'].map(f=>[lit(mk(true),f,0.5),lit(mk(false),f,0.5)]);
   out.front=[0.2,0.7].map(t=>[lit(mk(true),'front',t),lit(mk(false),'front',t)]);
   return out;
  });
@@ -18,6 +19,7 @@ let fails=0,n=0;function assert(c,m){n++;if(c)console.log('PASS '+m);else{fails+
  assert(r.def===true&&r.old===true,'padrão e projetos antigos: ajuste da face de cima ligado');
  assert(Math.min.apply(null,r.on)>15,'ligado: face de cima sempre preenchida (mín '+Math.round(Math.min.apply(null,r.on))+'%)');
  assert(Math.min.apply(null,r.off)<1,'desligado: cálculo exato como antes (pisca, mín '+Math.round(Math.min.apply(null,r.off))+'%)');
+ assert(r.sides.every(a=>a[0]>15&&a[1]<1),'Direita, Esquerda e Trás: com perspectiva própria ficam preenchidas ('+r.sides.map(a=>Math.round(a[0])+'%')+'), desligado ficam vazias como antes');
  assert(r.front.every(a=>Math.abs(a[0]-a[1])<0.01),'face da frente não muda');
  assert(h.errs.length===0,'erros de página: nenhum');
  await h.close();console.log(n+' testes, '+fails+' falhas');process.exit(fails?1:0);

@@ -442,7 +442,7 @@
     b.appendChild(el('p', 'il-note', 'Isso muda só como você vê o palco aqui. Para mudar a perspectiva de verdade nos cubos, ajuste a altura do olho do público:'));
     var eyeY = stage().viewer.pos[1];
     slider(b, 'Altura do olho do público (pol)', function () { return stage().viewer.pos[1]; }, function (v) { H.checkpoint('il-view'); T.ensureStage(seq()); seq().stage.viewer.pos[1] = v; seq().stage = C.fixStage(seq().stage); syncOut(); }, 0, 200, 1);
-    var al = el('label'), ac = el('input'); ac.type = 'checkbox'; ac.id = 'il-assist'; ac.checked = S.il.camera.assist !== false; ac.addEventListener('change', function () { S.il.camera.assist = ac.checked; changed('il-assist'); }); al.appendChild(ac); al.appendChild(document.createTextNode(' Face de cima: mostrar inteira (como se visse de mais alto)')); b.appendChild(al);
+    var al = el('label'), ac = el('input'); ac.type = 'checkbox'; ac.id = 'il-assist'; ac.checked = S.il.camera.assist !== false; ac.addEventListener('change', function () { S.il.camera.assist = ac.checked; changed('il-assist'); }); al.appendChild(ac); al.appendChild(document.createTextNode(' Cada face com a própria perspectiva (Direita, Esquerda, Trás e Topo vistas de frente)')); b.appendChild(al);
     slider(b, 'Abertura da lente (°)', function () { return S.il.camera.fov; }, function (v) { S.il.camera.fov = v; changed('il-fov'); }, 10, 90, 1);
     ['camx', 'camy', 'camz'].forEach(function (n) { var P = C.PARAMS[n]; slider(b, P.label.replace('Olhar', 'Deslocar o olho'), function () { return S.il.params[n]; }, function (v) { S.il.params[n] = v; changed('il-p:' + n); }, P.min, P.max, P.step, { kf: n }); });
     return b;

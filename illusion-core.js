@@ -659,17 +659,15 @@
     else { free = true; cube = { id: '_', size: 16, pos: [0, 0, 0], rotY: 0, faces: {} }; frame = faceFrame(cube, 'front'); }
     var eye = hit ? stage.viewer.pos.slice() : [0, 0, 16 * 4];
     eye = [eye[0] + P.camx, eye[1] + P.camy, eye[2] + P.camz];
-    // Face de cima vista de raspão: o interior quase não aparece e a ilusão pisca. Com o ajuste ligado, desenha como se o público
-    // estivesse a ~50 graus acima da face (a mesma distância), então o efeito fica inteiro e contínuo.
-    if (hit && hit.face === 'top' && (!il.camera || il.camera.assist !== false)) {
+    // Perspectiva própria de cada face (modo "normal"): a Frente usa o ponto de vista do público. Direita, Esquerda, Trás e Topo são
+    // desenhadas como se o público estivesse de frente para elas (mesma distância e mesma altura do olho). Se o público real já enxerga a
+    // face com folga (menos de 60 graus de inclinação), usa o ponto de vista real, então nada muda para quem olha de canto.
+    if (hit && hit.face !== 'front' && (!il.camera || il.camera.assist !== false)) {
       var nn = frame.n, rl = [eye[0] - frame.center[0], eye[1] - frame.center[1], eye[2] - frame.center[2]], dl = Math.sqrt(rl[0] * rl[0] + rl[1] * rl[1] + rl[2] * rl[2]) || 1;
-      var sn = (rl[0] * nn[0] + rl[1] * nn[1] + rl[2] * nn[2]) / dl, elv = Math.asin(Math.max(-1, Math.min(1, sn))) * 180 / Math.PI;
-      if (elv > 0 && elv < 50) {
-        var hx = [rl[0] - nn[0] * sn * dl, rl[1] - nn[1] * sn * dl, rl[2] - nn[2] * sn * dl], hl = Math.sqrt(hx[0] * hx[0] + hx[1] * hx[1] + hx[2] * hx[2]);
-        if (hl > 1e-6) {
-          var ca = Math.cos(50 * Math.PI / 180), sa = Math.sin(50 * Math.PI / 180), dd = Math.max(dl, 40);
-          eye = [frame.center[0] + dd * (ca * hx[0] / hl + sa * nn[0]), frame.center[1] + dd * (ca * hx[1] / hl + sa * nn[1]), frame.center[2] + dd * (ca * hx[2] / hl + sa * nn[2])];
-        }
+      if ((rl[0] * nn[0] + rl[1] * nn[1] + rl[2] * nn[2]) / dl < 0.5) {
+        var vv = stage.viewer.pos, hd = Math.max(40, Math.min(400, Math.sqrt((vv[0] - cube.pos[0]) * (vv[0] - cube.pos[0]) + (vv[2] - cube.pos[2]) * (vv[2] - cube.pos[2]))));
+        var base = hit.face === 'top' ? [frame.center[0] + nn[0] * hd, frame.center[1] + nn[1] * hd, frame.center[2] + nn[2] * hd] : [cube.pos[0] + nn[0] * hd, vv[1], cube.pos[2] + nn[2] * hd];
+        eye = [base[0] + frame.r[0] * P.camx + frame.u[0] * P.camy + nn[0] * P.camz, base[1] + frame.r[1] * P.camx + frame.u[1] * P.camy + nn[1] * P.camz, base[2] + frame.r[2] * P.camx + frame.u[2] * P.camy + nn[2] * P.camz];
       }
     }
     var pr = PRESETS[il.preset], scope = pr.scope;
