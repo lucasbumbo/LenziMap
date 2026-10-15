@@ -39,7 +39,7 @@
       try {
         var rf = IC.resolveFace(stage, il, null, x.key, 0), rel = [rf.eye[0] - rf.frame.center[0], rf.eye[1] - rf.frame.center[1], rf.eye[2] - rf.frame.center[2]];
         var dl = Math.sqrt(rel[0] * rel[0] + rel[1] * rel[1] + rel[2] * rel[2]) || 1, el = Math.asin(Math.max(-1, Math.min(1, (rel[0] * rf.frame.n[0] + rel[1] * rf.frame.n[1] + rel[2] * rf.frame.n[2]) / dl))) * 180 / Math.PI;
-        if (el > 0 && el < 25) warnings.push('A face ' + IC.FACE_LABEL[x.face] + ' é vista de raspão pelo público (' + Math.round(el) + ' graus). O interior aparece só em uma faixa fina e pisca conforme a animação passa. Suba o ponto de vista do público ou use outro efeito nessa face.');
+        if (el > 0 && el < 25 && !(x.face === 'top' && il.camera.assist !== false)) warnings.push('A face ' + IC.FACE_LABEL[x.face] + ' é vista de raspão pelo público (' + Math.round(el) + ' graus). O interior aparece só em uma faixa fina e pisca conforme a animação passa. Suba o ponto de vista do público ou use outro efeito nessa face.');
       } catch (e) {}
       var tr = Seq.addLayer(seq, x.key, '3D · ' + il.name);
       if (!tr) return;

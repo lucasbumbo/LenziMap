@@ -174,3 +174,7 @@ Na aba **3D**, o primeiro cartão é **Sala (montar paredes)**. A face do cubo v
 **Ver de cima:** em **Câmera e visualização**, os botões De frente, Um pouco de cima e De cima inclinam a prévia do palco. Isso só muda o que você vê no painel. A perspectiva real nos cubos muda com a **Altura do olho do público** (mesma seção) e com o Assistente do espectador.
 
 **Limites desta versão:** vídeo ainda não funciona como textura no 3D (só GIF e imagem). Em iPhone e iPad a imagem entra pelo endereço direto, não foi testada. Se uma imagem não carregar, o painel avisa em Objetos.
+
+
+## 1.0.1: face de cima na ilusão 3D
+A face de cima é vista de raspão pelo público e o interior quase não aparecia (a ilusão piscava). Agora, no painel 3D, a opção "Face de cima: mostrar inteira" vem ligada: a face é desenhada como se o público estivesse a ~50 graus acima dela. Desligue para voltar ao cálculo exato. Não testado em projetor nem em cubos reais.

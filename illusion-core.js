@@ -290,7 +290,7 @@
       params: defaultParams(preset),
       style: { color1: '#2fd8ff', color2: '#ff4fa3', obj: 'cube', material: 'matte', wall: 'grid' },
       light: { ambient: 0.35, key: 1, keyDir: [-0.4, 0.8, 0.6], keyColor: '#ffffff', core: 0.6, coreColor: '#66ccff' },
-      camera: { view: 'audience', fov: 35 },
+      camera: { view: 'audience', fov: 35, assist: true },
       quality: 'medium'
     };
     if (preset === 'room-builder') il.room = defaultRoom();
@@ -359,6 +359,7 @@
     var cm = x.camera || {};
     out.camera.view = CAM_VIEWS.indexOf(cm.view) >= 0 ? cm.view : 'audience';
     out.camera.fov = clamp(num(cm.fov, 35), 10, 100);
+    out.camera.assist = cm.assist !== false;
     out.quality = QUALITIES.indexOf(x.quality) >= 0 ? x.quality : 'medium';
     if (out.preset === 'room-builder') out.room = cleanRoom(x.room, warnings);
     return { ok: true, value: out, errors: errors, warnings: warnings };
@@ -658,6 +659,19 @@
     else { free = true; cube = { id: '_', size: 16, pos: [0, 0, 0], rotY: 0, faces: {} }; frame = faceFrame(cube, 'front'); }
     var eye = hit ? stage.viewer.pos.slice() : [0, 0, 16 * 4];
     eye = [eye[0] + P.camx, eye[1] + P.camy, eye[2] + P.camz];
+    // Face de cima vista de raspão: o interior quase não aparece e a ilusão pisca. Com o ajuste ligado, desenha como se o público
+    // estivesse a ~50 graus acima da face (a mesma distância), então o efeito fica inteiro e contínuo.
+    if (hit && hit.face === 'top' && (!il.camera || il.camera.assist !== false)) {
+      var nn = frame.n, rl = [eye[0] - frame.center[0], eye[1] - frame.center[1], eye[2] - frame.center[2]], dl = Math.sqrt(rl[0] * rl[0] + rl[1] * rl[1] + rl[2] * rl[2]) || 1;
+      var sn = (rl[0] * nn[0] + rl[1] * nn[1] + rl[2] * nn[2]) / dl, elv = Math.asin(Math.max(-1, Math.min(1, sn))) * 180 / Math.PI;
+      if (elv > 0 && elv < 50) {
+        var hx = [rl[0] - nn[0] * sn * dl, rl[1] - nn[1] * sn * dl, rl[2] - nn[2] * sn * dl], hl = Math.sqrt(hx[0] * hx[0] + hx[1] * hx[1] + hx[2] * hx[2]);
+        if (hl > 1e-6) {
+          var ca = Math.cos(50 * Math.PI / 180), sa = Math.sin(50 * Math.PI / 180), dd = Math.max(dl, 40);
+          eye = [frame.center[0] + dd * (ca * hx[0] / hl + sa * nn[0]), frame.center[1] + dd * (ca * hx[1] / hl + sa * nn[1]), frame.center[2] + dd * (ca * hx[2] / hl + sa * nn[2])];
+        }
+      }
+    }
     var pr = PRESETS[il.preset], scope = pr.scope;
     var local = scope === 'face' ? frame : cubeFrame(cube);
     var scene = buildScene(il, ill, t, frame.half);
