@@ -290,7 +290,7 @@
       params: defaultParams(preset),
       style: { color1: '#2fd8ff', color2: '#ff4fa3', obj: 'cube', material: 'matte', wall: 'grid' },
       light: { ambient: 0.35, key: 1, keyDir: [-0.4, 0.8, 0.6], keyColor: '#ffffff', core: 0.6, coreColor: '#66ccff' },
-      camera: { view: 'audience', fov: 35, assist: true },
+      camera: { view: 'audience', fov: 35, assist: true, yaw: 0, tilt: 0 },
       quality: 'medium'
     };
     if (preset === 'room-builder') il.room = defaultRoom();
@@ -360,6 +360,7 @@
     out.camera.view = CAM_VIEWS.indexOf(cm.view) >= 0 ? cm.view : 'audience';
     out.camera.fov = clamp(num(cm.fov, 35), 10, 100);
     out.camera.assist = cm.assist !== false;
+    out.camera.yaw = clamp(num(cm.yaw, 0), -80, 80); out.camera.tilt = clamp(num(cm.tilt, 0), -60, 60);
     out.quality = QUALITIES.indexOf(x.quality) >= 0 ? x.quality : 'medium';
     if (out.preset === 'room-builder') out.room = cleanRoom(x.room, warnings);
     return { ok: true, value: out, errors: errors, warnings: warnings };
@@ -659,10 +660,17 @@
     else { free = true; cube = { id: '_', size: 16, pos: [0, 0, 0], rotY: 0, faces: {} }; frame = faceFrame(cube, 'front'); }
     var eye = hit ? stage.viewer.pos.slice() : [0, 0, 16 * 4];
     eye = [eye[0] + P.camx, eye[1] + P.camy, eye[2] + P.camz];
+    // Perspectiva manual da face: Girar (esquerda/direita) e Inclinar (cima/baixo) em volta da face, na mesma distância do público.
+    var manual = !!(hit && il.camera && (il.camera.yaw || il.camera.tilt));
+    if (manual) {
+      var yw = (il.camera.yaw || 0) * D2R, tl = (il.camera.tilt || 0) * D2R, rv = [eye[0] - frame.center[0], eye[1] - frame.center[1], eye[2] - frame.center[2]], md = Math.max(40, Math.min(600, Math.sqrt(rv[0] * rv[0] + rv[1] * rv[1] + rv[2] * rv[2]) || 130));
+      var dirv = [0, 1, 2].map(function (q) { return Math.cos(tl) * (Math.cos(yw) * frame.n[q] + Math.sin(yw) * frame.r[q]) + Math.sin(tl) * frame.u[q]; });
+      eye = [frame.center[0] + dirv[0] * md, frame.center[1] + dirv[1] * md, frame.center[2] + dirv[2] * md];
+    }
     // Perspectiva própria de cada face (modo "normal"): a Frente usa o ponto de vista do público. Direita, Esquerda, Trás e Topo são
     // desenhadas como se o público estivesse de frente para elas (mesma distância e mesma altura do olho). Se o público real já enxerga a
     // face com folga (menos de 60 graus de inclinação), usa o ponto de vista real, então nada muda para quem olha de canto.
-    if (hit && hit.face !== 'front' && (!il.camera || il.camera.assist !== false)) {
+    if (hit && !manual && hit.face !== 'front' && (!il.camera || il.camera.assist !== false)) {
       var nn = frame.n, rl = [eye[0] - frame.center[0], eye[1] - frame.center[1], eye[2] - frame.center[2]], dl = Math.sqrt(rl[0] * rl[0] + rl[1] * rl[1] + rl[2] * rl[2]) || 1;
       if ((rl[0] * nn[0] + rl[1] * nn[1] + rl[2] * nn[2]) / dl < 0.5) {
         var vv = stage.viewer.pos, hd = Math.max(40, Math.min(400, Math.sqrt((vv[0] - cube.pos[0]) * (vv[0] - cube.pos[0]) + (vv[2] - cube.pos[2]) * (vv[2] - cube.pos[2]))));

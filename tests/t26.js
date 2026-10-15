@@ -17,7 +17,7 @@ let fails=0,n=0;function assert(c,m){n++;if(c)console.log('PASS '+m);else{fails+
  assert(f2.left&&f2.left!==f2.top,'escolher Esquerda liga outra tela (não repete)');
  // 2) fundo
  await p.evaluate(()=>{window.IllusionUI.state.il.params.depth=60;window.IllusionUI.render();});await p.waitForTimeout(300);
- assert(await p.locator('text=Distância do fundo').count()>=1,'tem o controle Distância do fundo');
+ assert(await p.locator('text=Profundidade do fundo').count()>=1,'tem o controle Profundidade do fundo');
  // 3) paredes
  assert(await p.locator('#il-wall-back').count()===1&&await p.locator('#il-wall-floor').count()===1,'paredes (fundo, chão...) na mesma tela');
  await p.uncheck('#il-wall-ceiling');await p.waitForTimeout(200);

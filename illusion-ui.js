@@ -6,7 +6,7 @@
   var C = root.IllusionCore, G = root.IllusionGL, T = root.IllusionTimeline, Seq = root.Sequence;
   var H = null, sec = null;
   var PRESETS_KEY = 'lenzi-illusion-presets';
-  var S = { il: null, assetId: null, view: 'audience', orbit: { yaw: 30, pitch: 22, dist: 90 }, playing: true, t0: 0, tFree: 0, dur: 8, quick: true, msg: '', cv: null, raf: 0, lastSel: null, open: { ilusao: true, alvo: true, prof: true, sala: true, facil: true, vista: true, prof2: true }, adv: false };
+  var S = { il: null, assetId: null, view: 'audience', orbit: { yaw: 30, pitch: 22, dist: 90 }, playing: true, t0: 0, tFree: 0, dur: 8, quick: true, msg: '', cv: null, raf: 0, lastSel: null, open: { ilusao: true, alvo: true, prof: true, sala: true, facil: true, vista: true, prof2: true, r3d: true }, adv: false, faceIl: {} };
   try { S.adv = localStorage.getItem('lenzi-il-adv') === '1'; } catch (e) {}
 
   var CSS = '.il-wrap{display:flex;flex-direction:column;gap:10px}.il-wrap h2{margin:0}.il-box{border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:8px;display:flex;flex-direction:column;gap:8px}' +
@@ -127,16 +127,23 @@
     if (hid.length) b.appendChild(el('p', 'il-warn', 'Do ponto de vista do público não dá para ver a face: ' + hid.join(', ') + '. Ela fica vazia. Mude o Olho X, Y ou Z do público (opções avançadas, Câmera) ou gire o cubo.'));
   }
   // ---------- modo fácil: 1) escolher a face  2) empurrar o fundo  3) paredes ----------
+  // Cada face tem a sua própria configuração (paredes, profundidade, girar) e o seu próprio clipe na timeline.
+  function faceKey(il) { return il.target.cube + ':' + (il.target.faces[0] || 'front'); }
   function selectFace(cubeId, f) {
     var st = stage(), cube = C.cubeById(st, cubeId) || st.cubes[0];
+    if (S.il) S.faceIl[faceKey(S.il)] = { il: S.il, assetId: S.assetId };
+    var it = S.faceIl[cube.id + ':' + f];
+    if (it && it.assetId && !T.illusionOf(seq(), it.assetId)) it.assetId = null;
+    if (it) { S.il = it.il; S.assetId = it.assetId; }
+    else { newIllusion('room-builder'); S.il.camera.view = 'free'; S.il.camera.yaw = 0; S.il.camera.tilt = 0; }
     S.il.target.cube = cube.id; S.il.target.faces = [f];
     if (!cube.faces[f]) {
       var used = {}; st.cubes.forEach(function (c) { C.FACES.forEach(function (g) { if (c.faces[g]) used[c.faces[g]] = 1; }); });
       var free = H.surfaces().map(function (z) { return z.s.key; }).filter(function (kk) { return kk && !used[kk]; });
       if (free.length) { S.msg = 'Liguei a ' + surfName(free[0]) + ' na face ' + C.FACE_LABEL[f] + '.'; bindSurface(cube.id, f, free[0]); return; }
       S.msg = 'Não tem tela livre. Crie uma superfície nova (botão de nova caixa) e escolha de novo.';
-    } else S.msg = 'Face ' + C.FACE_LABEL[f] + ' escolhida.';
-    changed('il-faces', true);
+    } else S.msg = 'Face ' + C.FACE_LABEL[f] + ' escolhida.' + (S.assetId ? ' Já está na timeline: o que você mudar vale na hora.' : '');
+    render();
   }
   // Por cima do cubo 3D: nome da tela em cada face, face escolhida em rosa, face sob o mouse com contorno
   function overlayFaces() {
@@ -157,45 +164,9 @@
     });
     ctx.restore();
   }
-  // ---------- ponto de vista do público por ângulo (quina, frente) ----------
-  function viewerPolar(cube) {
-    var v = stage().viewer.pos, dx = v[0] - cube.pos[0], dz = v[2] - cube.pos[2], yaw = Math.atan2(dx, dz) * 180 / Math.PI - (cube.rotY || 0);
-    yaw = ((yaw % 360) + 540) % 360 - 180;
-    return { yaw: yaw, dist: Math.sqrt(dx * dx + dz * dz), h: v[1] };
-  }
-  function viewerFromPolar(cube, yaw, dist, h) { var a = ((cube.rotY || 0) + yaw) * Math.PI / 180; return [cube.pos[0] + Math.sin(a) * dist, h, cube.pos[2] + Math.cos(a) * dist]; }
-  function freeSurfaceKey() {
-    var used = {}; stage().cubes.forEach(function (c) { C.FACES.forEach(function (g) { if (c.faces[g]) used[c.faces[g]] = 1; }); });
-    var free = H.surfaces().map(function (z) { return z.s.key; }).filter(function (kk) { return kk && !used[kk]; });
-    return free[0] || null;
-  }
-  // Projetor apontado para a quina: as duas faces da quina usam o mesmo ponto de vista, a 45 graus
-  function setCorner(side) {
-    var cube = C.cubeById(stage(), S.il.target.cube) || stage().cubes[0], fs = side === 'right' ? ['front', 'right'] : ['left', 'front'], miss = [];
-    S.il.target.cube = cube.id; S.il.target.faces = fs.slice();
-    fs.forEach(function (f) { var c2 = C.cubeById(stage(), cube.id); if (!c2.faces[f]) { var k = freeSurfaceKey(); if (k) bindSurface(cube.id, f, k); else miss.push(C.FACE_LABEL[f]); } });
-    var pv = viewerPolar(cube), p2 = viewerFromPolar(cube, side === 'right' ? 45 : -45, Math.max(60, pv.dist), pv.h);
-    editStage(function (s2) { s2.viewer.pos = p2; }, 'il-view');
-    S.msg = 'Quina ' + (side === 'right' ? 'direita' : 'esquerda') + ': faces ' + fs.map(function (f) { return C.FACE_LABEL[f]; }).join(' e ') + ', público a 45 graus.' + (miss.length ? ' Falta tela livre para: ' + miss.join(', ') + '.' : '');
-    changed('il-faces', true);
-  }
-  function secEasyView() {
-    var b = box('vista', '2. De onde o público vê (perspectiva)'), st = stage(), cube = C.cubeById(st, S.il.target.cube) || st.cubes[0];
-    b.appendChild(el('p', 'il-note', 'A animação é desenhada para um ponto de vista só. Se o projetor aponta para a quina do cubo, use uma das quinas: as duas faces ficam na mesma perspectiva e a animação continua de uma face para a outra.'));
-    var row = el('div', 'il-row'); row.style.flexWrap = 'wrap';
-    row.appendChild(btn('De frente', function () { var pv = viewerPolar(cube); S.il.target.faces = ['front']; editStage(function (s2) { s2.viewer.pos = viewerFromPolar(C.cubeById(s2, cube.id), 0, Math.max(60, pv.dist), pv.h); }, 'il-view'); changed('il-faces', true); }, null, 'il-vw-front'));
-    row.appendChild(btn('Quina direita (Frente + Direita)', function () { setCorner('right'); }, null, 'il-vw-cr'));
-    row.appendChild(btn('Quina esquerda (Esquerda + Frente)', function () { setCorner('left'); }, null, 'il-vw-cl'));
-    b.appendChild(row);
-    function setV(yaw, dist, h) { H.checkpoint('il-view'); T.ensureStage(seq()); seq().stage.viewer.pos = viewerFromPolar(C.cubeById(seq().stage, cube.id) || cube, yaw, dist, h); seq().stage = C.fixStage(seq().stage); syncOut(); }
-    slider(b, 'Ângulo do público (graus: 0 = de frente, 45 = quina direita, -45 = quina esquerda)', function () { return Math.round(viewerPolar(cube).yaw); }, function (v) { var pv = viewerPolar(cube); setV(v, pv.dist, pv.h); }, -85, 85, 1);
-    slider(b, 'Distância do público (pol, mais perto = perspectiva mais forte)', function () { return Math.round(viewerPolar(cube).dist); }, function (v) { var pv = viewerPolar(cube); setV(pv.yaw, v, pv.h); }, 30, 400, 1);
-    slider(b, 'Altura do olho (pol)', function () { return Math.round(viewerPolar(cube).h); }, function (v) { var pv = viewerPolar(cube); setV(pv.yaw, pv.dist, v); }, 0, 200, 1);
-    return b;
-  }
   function secEasy() {
-    var b = box('facil', '1. Escolha a face (clique nela no cubo 3D acima)'), st = stage();
-    b.appendChild(selectRow('Cubo', st.cubes.map(function (c) { return [c.id, c.name + ' (' + c.size + ' pol)']; }), function () { return S.il.target.cube; }, function (v) { S.il.target.cube = v; changed('il-target', true); }, 'il-cube'));
+    var b = box('facil', 'Face (clique nela no cubo 3D acima)'), st = stage();
+    b.appendChild(selectRow('Cubo', st.cubes.map(function (c) { return [c.id, c.name + ' (' + c.size + ' pol)']; }), function () { return S.il.target.cube; }, function (v) { selectFace(v, S.il.target.faces[0] || 'front'); }, 'il-cube'));
     var cube = C.cubeById(st, S.il.target.cube) || st.cubes[0], cur = S.il.target.faces[0] || 'front', row = el('div', 'il-row'); row.style.flexWrap = 'wrap';
     C.FACES.forEach(function (f) {
       var k = cube.faces[f], x = btn(C.FACE_LABEL[f] + (k ? '' : ' (sem tela)'), function () {
@@ -208,10 +179,25 @@
     faceWarnings(b, st);
     return b;
   }
-  function secEasyDepth() {
-    var b = box('prof2', '3. Empurre o fundo'), P = C.PARAMS.depth;
-    b.appendChild(el('p', 'il-note', 'Quanto maior, mais longe fica a parede do fundo. Você também pode arrastar o fundo na vista de cima, abaixo.'));
-    slider(b, 'Distância do fundo (pol)', function () { return S.il.params.depth; }, function (v) { S.il.params.depth = v; changed('il-p:depth'); drawRoomCv(); }, P.min, P.max, P.step, { kf: 'depth' });
+  function secEasy3d() {
+    var f0 = S.il.target.faces[0] || 'front', b = box('r3d', 'Face ' + C.FACE_LABEL[f0] + ': girar o 3D e camadas (fundo, lados, chão, teto)'), R = S.il.room;
+    S.rcv = null;
+    slider(b, 'Girar o 3D (graus, esquerda/direita)', function () { return S.il.camera.yaw || 0; }, function (v) { S.il.camera.yaw = v; changed('il-cam'); }, -80, 80, 1);
+    slider(b, 'Inclinar o 3D (graus, cima/baixo)', function () { return S.il.camera.tilt || 0; }, function (v) { S.il.camera.tilt = v; changed('il-cam'); }, -60, 60, 1);
+    var P = C.PARAMS.depth;
+    slider(b, 'Profundidade do fundo (pol)', function () { return S.il.params.depth; }, function (v) { S.il.params.depth = v; changed('il-p:depth'); }, P.min, P.max, P.step, { kf: 'depth' });
+    C.ROOM_WALLS.forEach(function (k) {
+      var w = R.walls[k], row = el('div', 'il-row'); row.dataset.wall = k;
+      var cb = el('input'); cb.type = 'checkbox'; cb.checked = w.on; cb.id = 'il-wall-' + k; cb.setAttribute('aria-label', C.WALL_LABEL[k]);
+      cb.addEventListener('change', function () { w.on = cb.checked; changed('il-room', true); });
+      var lb = el('label'); lb.appendChild(cb); lb.appendChild(document.createTextNode(' ' + C.WALL_LABEL[k])); lb.style.minWidth = '112px'; row.appendChild(lb);
+      var col = el('input'); col.type = 'color'; col.value = w.color; col.id = 'il-wallc-' + k; col.title = 'Cor da parede'; col.setAttribute('aria-label', 'Cor: ' + C.WALL_LABEL[k]);
+      col.addEventListener('input', function () { w.color = col.value; changed('il-room-c'); });
+      row.appendChild(col);
+      row.appendChild(mediaPicker(w.media, function (m) { w.media = m; changed('il-room', true); }, 'il-wallm-' + k));
+      b.appendChild(row);
+      if (w.on && k !== 'back') slider(b, C.WALL_LABEL[k] + ': profundidade para dentro (pol)', function () { return w.d; }, function (v) { w.d = v; changed('il-room-d'); }, 0, 14, 0.5);
+    });
     return b;
   }
   function secTarget() {
@@ -644,7 +630,7 @@
     if (S.assetId) ar2.appendChild(btn('Desfazer aplicação', function () { var asset = S.assetId; H.checkpoint('il-remove'); T.removeAll(seq(), asset); S.assetId = null; H.syncClock(); H.renderAll(); S.msg = 'Ilusão removida da timeline. Ela voltou a ser rascunho.'; render(); }, null, 'il-remove'));
     w.appendChild(ar2);
     var easy = !S.adv && S.il.preset === 'room-builder';
-    (easy ? [secEasy, secEasyView, secEasyDepth, secRoom] : [secIllusion, secTarget].concat(S.il.preset === 'room-builder' ? [secRoom] : [], [secGeometry, secParams, secCamera, secLight, secMaterial, secAnim, secQuality, secPresets])).forEach(function (f) { w.appendChild(f()); });
+    (easy ? [secEasy, secEasy3d] : [secIllusion, secTarget].concat(S.il.preset === 'room-builder' ? [secRoom] : [], [secGeometry, secParams, secCamera, secLight, secMaterial, secAnim, secQuality, secPresets])).forEach(function (f) { w.appendChild(f()); });
     var al = el('label', 'il-note'), ac = el('input'); ac.type = 'checkbox'; ac.id = 'il-adv'; ac.checked = S.adv;
     ac.addEventListener('change', function () { S.adv = ac.checked; try { localStorage.setItem('lenzi-il-adv', S.adv ? '1' : '0'); } catch (e) {} render(); });
     al.appendChild(ac); al.appendChild(document.createTextNode(' Mostrar opções avançadas (tipos de ilusão, câmera, luz, geometria do palco)')); w.appendChild(al);
@@ -673,7 +659,7 @@
     H = host; sec = document.getElementById('il-panel');
     if (!sec || !C || !G || !T) return;
     if (!document.getElementById('il-css')) { var st = el('style'); st.id = 'il-css'; st.textContent = CSS; document.head.appendChild(st); }
-    newIllusion(S.adv ? 'infinite-room' : 'room-builder'); S.msg = '';
+    S.faceIl = {}; S.faceIl = {}; newIllusion(S.adv ? 'infinite-room' : 'room-builder'); S.msg = '';
     if (!S.adv) { S.view = 'free'; S.il.camera.view = 'free'; S.orbit = { yaw: 30, pitch: 24, dist: 38 }; }
     S.t0 = performance.now();
     render();
