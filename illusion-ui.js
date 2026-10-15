@@ -193,7 +193,7 @@
     ctx.restore();
   }
   function secEasy() {
-    var b = box('facil', 'Face (clique nela no cubo 3D acima)'), st = stage();
+    var b = box('facil', '1. Escolha a face (ou clique nela no cubo)'), st = stage();
     b.appendChild(selectRow('Cubo', st.cubes.map(function (c) { return [c.id, c.name + ' (' + c.size + ' pol)']; }), function () { return S.il.target.cube; }, function (v) { selectFace(v, S.il.target.faces[0] || 'front'); }, 'il-cube'));
     var cube = C.cubeById(st, S.il.target.cube) || st.cubes[0], cur = S.il.target.faces[0] || 'front', row = el('div', 'il-row'); row.style.flexWrap = 'wrap';
     C.FACES.forEach(function (f) {
@@ -203,34 +203,47 @@
       x.setAttribute('aria-pressed', S.il.target.faces.indexOf(f) >= 0 ? 'true' : 'false'); row.appendChild(x);
     });
     b.appendChild(row);
-    b.appendChild(selectRow('Tela (superfície) desta face', surfaceOptions(), function () { return cube.faces[cur] || ''; }, function (v) { bindSurface(cube.id, cur, v); }, 'il-bind-' + cur));
     faceWarnings(b, st);
     return b;
   }
   function secEasy3d() {
-    var f0 = curFace(), jn = isJoined() ? C.JOINS[S.il.room.join] : null, R = S.il.room;
-    var b = box('r3d', jn ? 'Sala contínua: ' + C.FACE_LABEL[jn.a] + ' + ' + C.FACE_LABEL[jn.b] : 'Face ' + C.FACE_LABEL[f0] + ': escolha a sala e as camadas');
+    var f0 = curFace(), jn = isJoined() ? C.JOINS[S.il.room.join] : null, R = S.il.room, st0 = stage(), cube0 = C.cubeById(st0, S.il.target.cube) || st0.cubes[0];
+    var b = box('r3d', jn ? '2 a 4. Sala na quina: ' + C.FACE_LABEL[jn.a] + ' + ' + C.FACE_LABEL[jn.b] : '2 a 4. Sala da face ' + C.FACE_LABEL[f0]);
     S.rcv = null;
+    // passo 2: tipo de sala (botões grandes)
+    b.appendChild(el('p', 'il-note', '2. Escolha o tipo de sala'));
+    var defs = { corredor: ['Corredor', { back: 1, left: 1, right: 1, floor: 1, ceiling: 1 }, 90], quarto: ['Quarto', { back: 1, left: 1, right: 1, floor: 1, ceiling: 1 }, 40], caixa: ['Caixa funda', { back: 1 }, 70], chao: ['Chão e fundo', { back: 1, floor: 1 }, 70] };
+    var rowS = el('div', 'il-row'); rowS.style.flexWrap = 'wrap';
+    Object.keys(defs).forEach(function (k) {
+      var d = defs[k];
+      rowS.appendChild(btn(d[0], function () {
+        C.ROOM_WALLS.forEach(function (w2) { S.il.room.walls[w2].on = !!d[1][w2]; });
+        S.il.params.depth = Math.max(C.PARAMS.depth.min, Math.min(C.PARAMS.depth.max, d[2]));
+        changed('il-room', true);
+      }, '', 'il-sala-' + k));
+    });
+    b.appendChild(rowS);
     var ring = ['front', 'right', 'back', 'left'], ix = ring.indexOf(f0);
     if (ix >= 0) {
       var kn = ring[ix] + '+' + ring[(ix + 1) % 4], kp = ring[(ix + 3) % 4] + '+' + ring[ix];
-      b.appendChild(selectRow('Sala contínua na quina', [['', 'Não, só esta face'], [kn, 'Com a face ' + C.FACE_LABEL[ring[(ix + 1) % 4]]], [kp, 'Com a face ' + C.FACE_LABEL[ring[(ix + 3) % 4]]]], function () { return R.join || ''; }, function (v) { setJoin(v); }, 'il-join'));
-      if (jn) b.appendChild(el('p', 'il-note', 'As duas faces mostram uma sala só, vista de um ponto na quina (45 graus entre elas). Girar o 3D move esse ponto.'));
+      b.appendChild(selectRow('Sala na quina (duas faces juntas)', [['', 'Não, só esta face'], [kn, 'Com a face ' + C.FACE_LABEL[ring[(ix + 1) % 4]]], [kp, 'Com a face ' + C.FACE_LABEL[ring[(ix + 3) % 4]]]], function () { return R.join || ''; }, function (v) { setJoin(v); }, 'il-join'));
     }
-    var presets = [['', 'Escolha uma sala pronta...'], ['corredor', 'Corredor (fundo, lados, chão e teto, bem fundo)'], ['quarto', 'Quarto (tudo fechado, médio)'], ['caixa', 'Caixa funda (só o fundo)'], ['chao', 'Chão e fundo']];
-    b.appendChild(selectRow('Sala pronta', presets, function () { return ''; }, function (v) {
-      var def = { corredor: { on: { back: 1, left: 1, right: 1, floor: 1, ceiling: 1 }, depth: 90 }, quarto: { on: { back: 1, left: 1, right: 1, floor: 1, ceiling: 1 }, depth: 40 }, caixa: { on: { back: 1 }, depth: 70 }, chao: { on: { back: 1, floor: 1 }, depth: 70 } }[v];
-      if (!def) return;
-      C.ROOM_WALLS.forEach(function (k) { S.il.room.walls[k].on = !!def.on[k]; });
-      S.il.params.depth = Math.max(C.PARAMS.depth.min, Math.min(C.PARAMS.depth.max, def.depth));
-      changed('il-room', true);
-    }, 'il-preset'));
+    // passo 3: profundidade
+    b.appendChild(el('p', 'il-note', '3. Quanto fundo?'));
     var P = C.PARAMS.depth;
     slider(b, 'Profundidade do fundo (pol)', function () { return S.il.params.depth; }, function (v) { S.il.params.depth = v; changed('il-p:depth'); }, P.min, P.max, P.step, { kf: 'depth' });
+    // passo 4: cores e imagens
     var label = { back: 'Fundo', left: 'Parede esquerda', right: 'Parede direita', floor: 'Chão', ceiling: 'Teto' };
     if (jn) { label.back = 'Parede do fundo (direita)'; label.right = 'Parede do fundo (esquerda)'; }
+    var cores = el('details', 'il-box'); cores.id = 'il-cores'; cores.open = !!S.open.cores; cores.addEventListener('toggle', function () { S.open.cores = cores.open; });
+    cores.appendChild(el('summary', null, '4. Cores e imagens (opcional)'));
     var fino = el('details', 'il-box'); fino.id = 'il-fino'; fino.open = !!S.open.fino; fino.addEventListener('toggle', function () { S.open.fino = fino.open; });
-    fino.appendChild(el('summary', null, 'Ajuste fino (só se as linhas não fecharem no cubo real)'));
+    fino.appendChild(el('summary', null, 'Ajuste fino (só se precisar)'));
+    var dl = el('label', null, 'Duração (s) '), dn = el('input'); dn.type = 'number'; dn.min = 1; dn.max = 600; dn.step = 1; dn.value = S.dur; dn.id = 'il-dur'; dn.style.width = '64px'; dn.addEventListener('change', function () { S.dur = Math.max(1, Math.min(600, +dn.value || 8)); });
+    dn.addEventListener('keydown', function (e) { e.stopPropagation(); });
+    dl.appendChild(dn); fino.appendChild(dl);
+    var cur0 = S.il.target.faces[0] || 'front';
+    fino.appendChild(selectRow('Tela (superfície) desta face', surfaceOptions(), function () { return cube0.faces[cur0] || ''; }, function (v) { bindSurface(cube0.id, cur0, v); }, 'il-bind-' + cur0));
     slider(fino, 'Girar o 3D (graus, esquerda/direita)', function () { return S.il.camera.yaw || 0; }, function (v) { S.il.camera.yaw = v; changed('il-cam'); }, -80, 80, 1);
     slider(fino, 'Inclinar o 3D (graus, cima/baixo)', function () { return S.il.camera.tilt || 0; }, function (v) { S.il.camera.tilt = v; changed('il-cam'); }, -60, 60, 1);
     C.ROOM_WALLS.forEach(function (k) {
@@ -243,9 +256,10 @@
       col.addEventListener('input', function () { w.color = col.value; changed('il-room-c'); });
       row.appendChild(col);
       row.appendChild(mediaPicker(w.media, function (m) { w.media = m; changed('il-room', true); }, 'il-wallm-' + k));
-      b.appendChild(row);
+      cores.appendChild(row);
       if (!jn && w.on && k !== 'back') slider(fino, C.WALL_LABEL[k] + ': profundidade para dentro (pol)', function () { return w.d; }, function (v) { w.d = v; changed('il-room-d'); }, 0, 14, 0.5);
     });
+    b.appendChild(cores);
     b.appendChild(fino);
     return b;
   }
@@ -668,18 +682,21 @@
     }
     var stt = el('p', 'il-note'); stt.id = 'il-status'; stt.style.cssText = 'min-height:34px;overflow:hidden;font-variant-numeric:tabular-nums'; w.appendChild(stt);
     var msg = el('p', 'il-note il-ok'); msg.id = 'il-msg'; msg.textContent = S.msg; msg.setAttribute('role', 'status'); w.appendChild(msg);
+    var easy = !S.adv && S.il.preset === 'room-builder';
+    if (!easy) {
     var ar = el('div', 'il-row');
     var dl = el('label', null, 'Duração (s) '), dn = el('input'); dn.type = 'number'; dn.min = 1; dn.max = 600; dn.step = 1; dn.value = S.dur; dn.id = 'il-dur'; dn.style.width = '64px'; dn.addEventListener('change', function () { S.dur = Math.max(1, Math.min(600, +dn.value || 8)); });
     dn.addEventListener('keydown', function (e) { e.stopPropagation(); });
     dl.appendChild(dn); ar.appendChild(dl);
     var ql = el('label'), qc = el('input'); qc.type = 'checkbox'; qc.checked = S.quick; qc.id = 'il-quick-on'; qc.addEventListener('change', function () { S.quick = qc.checked; }); ql.appendChild(qc); ql.appendChild(document.createTextNode(' Incluir animação do preset')); ar.appendChild(ql);
     w.appendChild(ar);
+    }
     var ar2 = el('div', 'il-row');
-    ar2.appendChild(btn(S.assetId ? 'Aplicar de novo (nova camada)' : 'Aplicar na Timeline', applyNow, 'primary', 'il-apply'));
-    if (S.assetId) ar2.appendChild(btn('Desfazer aplicação', function () { var asset = S.assetId; H.checkpoint('il-remove'); T.removeAll(seq(), asset); S.assetId = null; H.syncClock(); H.renderAll(); S.msg = 'Ilusão removida da timeline. Ela voltou a ser rascunho.'; render(); }, null, 'il-remove'));
-    w.appendChild(ar2);
-    var easy = !S.adv && S.il.preset === 'room-builder';
+    ar2.appendChild(btn(S.assetId ? 'Aplicar de novo (nova camada)' : (easy ? 'Colocar na face' : 'Aplicar na Timeline'), applyNow, 'primary', 'il-apply'));
+    if (S.assetId) ar2.appendChild(btn(easy ? 'Tirar da face' : 'Desfazer aplicação', function () { var asset = S.assetId; H.checkpoint('il-remove'); T.removeAll(seq(), asset); S.assetId = null; H.syncClock(); H.renderAll(); S.msg = 'Ilusão removida da timeline. Ela voltou a ser rascunho.'; render(); }, null, 'il-remove'));
+    if (!easy) w.appendChild(ar2);
     (easy ? [secEasy, secEasy3d] : [secIllusion, secTarget].concat(S.il.preset === 'room-builder' ? [secRoom] : [], [secGeometry, secParams, secCamera, secLight, secMaterial, secAnim, secQuality, secPresets])).forEach(function (f) { w.appendChild(f()); });
+    if (easy) { ar2.className = 'il-row il-big'; w.appendChild(ar2); }
     var al = el('label', 'il-note'), ac = el('input'); ac.type = 'checkbox'; ac.id = 'il-adv'; ac.checked = S.adv;
     ac.addEventListener('change', function () { S.adv = ac.checked; try { localStorage.setItem('lenzi-il-adv', S.adv ? '1' : '0'); } catch (e) {} render(); });
     al.appendChild(ac); al.appendChild(document.createTextNode(' Mostrar opções avançadas (tipos de ilusão, câmera, luz, geometria do palco)')); w.appendChild(al);

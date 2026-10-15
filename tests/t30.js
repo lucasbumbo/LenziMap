@@ -5,6 +5,7 @@ let fails=0,n=0;function assert(c,m){n++;if(c)console.log('PASS '+m);else{fails+
  const h=await open(8949,{easy:true,w:1300,h:1900}),p=h.p;
  for(let i=0;i<3;i++){await p.click('#btn-newbox');await p.waitForTimeout(250);}
  await p.click('[data-go="ilusao"]');await p.waitForTimeout(1500);
+ await p.evaluate(()=>{['il-fino','il-cores'].forEach(i=>{const d=document.getElementById(i);if(d)d.open=true;});});await p.waitForTimeout(200);
  await p.click('#il-pick-front');await p.waitForTimeout(500);
  assert(await p.locator('#il-join').count()===1,'tem a opção Sala contínua na quina');
  const opts=await p.locator('#il-join option').allTextContents();

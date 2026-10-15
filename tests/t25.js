@@ -5,6 +5,7 @@ let fails=0,n=0;function assert(c,m){n++;if(c)console.log('PASS '+m);else{fails+
  const h=await open(8935),p=h.p;
  for(let i=0;i<3;i++){await p.click('#btn-newbox');await p.waitForTimeout(250);}
  await p.click('[data-go="ilusao"]');await p.waitForTimeout(1200);
+ await p.evaluate(()=>{['il-fino','il-cores'].forEach(i=>{const d=document.getElementById(i);if(d)d.open=true;});});await p.waitForTimeout(200);
  const keys=await p.evaluate(()=>window.TimelineUI._h.state.surfaces.map(s=>s.key));
  assert(keys.length>=3,'superfícies criadas ('+keys.length+')');
  const faces=()=>p.evaluate(()=>window.TimelineUI._h.tl.seq.stage.cubes[0].faces);

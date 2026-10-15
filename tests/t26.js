@@ -5,6 +5,7 @@ let fails=0,n=0;function assert(c,m){n++;if(c)console.log('PASS '+m);else{fails+
  const h=await open(8937,{easy:true}),p=h.p;
  for(let i=0;i<3;i++){await p.click('#btn-newbox');await p.waitForTimeout(250);}
  await p.click('[data-go="ilusao"]');await p.waitForTimeout(1200);
+ await p.evaluate(()=>{['il-fino','il-cores'].forEach(i=>{const d=document.getElementById(i);if(d)d.open=true;});});await p.waitForTimeout(200);
  assert(await p.evaluate(()=>window.IllusionUI.state.il.preset)==='room-builder','abre direto na Sala de paredes');
  assert(await p.locator('#il-adv').count()===1&&!(await p.locator('#il-adv').isChecked()),'opções avançadas começam desligadas');
  assert(await p.locator('.il-card').count()===0&&await p.locator('#il-quality').count()===0,'cartões avançados (tipos, qualidade) ficam escondidos');
