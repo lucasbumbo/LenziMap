@@ -178,3 +178,8 @@ Na aba **3D**, o primeiro cartão é **Sala (montar paredes)**. A face do cubo v
 
 ## 1.0.1: face de cima na ilusão 3D
 A face de cima é vista de raspão pelo público e o interior quase não aparecia (a ilusão piscava). Agora, no painel 3D, a opção "Face de cima: mostrar inteira" vem ligada: a face é desenhada como se o público estivesse a ~50 graus acima dela. Desligue para voltar ao cálculo exato. Não testado em projetor nem em cubos reais.
+
+## 1.0.2: ligação de faces
+- Uma superfície agora só fica ligada a uma face. Se você escolher uma superfície que já estava em outra face, ela sai da outra (antes as duas desenhavam no mesmo lugar e a ilusão aparecia errada).
+- O painel 3D avisa quando a mesma superfície está em duas faces (projetos antigos) e quando uma face marcada não pode ser vista do ponto de vista do público (fica vazia). Nesse caso, mude o Olho X, Y ou Z do público ou gire o cubo.
+- A lista de superfícies nas faces atualiza sozinha quando você cria ou apaga superfícies com o painel já aberto.

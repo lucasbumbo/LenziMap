@@ -122,7 +122,11 @@
       var s = el('select'); s.id = 'il-bind-' + f; s.setAttribute('aria-label', 'Superfície da face ' + C.FACE_LABEL[f]); s.style.flex = '1';
       opts.forEach(function (o) { var x = el('option', null, o[1]); x.value = o[0]; s.appendChild(x); });
       s.value = cube.faces[f] || '';
-      s.addEventListener('change', function () { editStage(function (stg) { C.cubeById(stg, cube.id).faces[f] = s.value || null; }, 'il-bind'); });
+      s.addEventListener('change', function () { editStage(function (stg) {
+          // uma superfície só pode ficar em uma face: se já estava em outra, tira de lá (senão duas faces desenham na mesma superfície)
+          if (s.value) stg.cubes.forEach(function (c2) { C.FACES.forEach(function (g) { if (c2.faces[g] === s.value) c2.faces[g] = null; }); });
+          C.cubeById(stg, cube.id).faces[f] = s.value || null;
+        }, 'il-bind'); });
       r.appendChild(s); b.appendChild(r);
     });
     var r2 = el('div', 'il-row');
@@ -137,6 +141,13 @@
     b.appendChild(r2);
     b.appendChild(el('p', 'il-note', 'Cada face do cubo físico vira uma janela pro mundo virtual e é projetada na superfície que você ligou. A calibração da superfície (cantos, máscara, malha) não muda.'));
     var tk = T.targetKeys(st, S.il);
+    // problemas que fazem a face aparecer errada ou vazia
+    var seenK = {}, dupK = {};
+    st.cubes.forEach(function (c3) { C.FACES.forEach(function (g) { var k3 = c3.faces[g]; if (!k3) return; if (seenK[k3]) dupK[k3] = (dupK[k3] || [seenK[k3]]).concat([c3.name + ' ' + C.FACE_LABEL[g]]); else seenK[k3] = c3.name + ' ' + C.FACE_LABEL[g]; }); });
+    Object.keys(dupK).forEach(function (k3) { b.appendChild(el('p', 'il-warn', 'A mesma superfície está ligada a mais de uma face (' + dupK[k3].join(' e ') + '). Escolha outra superfície para uma delas, senão as duas desenham no mesmo lugar.')); });
+    var hid = [];
+    S.il.target.faces.forEach(function (g) { try { var rr = C.resolveFace(st, S.il, null, null, 0, { cube: S.il.target.cube, face: g }); if (!rr.cam) hid.push(C.FACE_LABEL[g]); } catch (e) {} });
+    if (hid.length) b.appendChild(el('p', 'il-warn', 'Do ponto de vista do público não dá para ver a face: ' + hid.join(', ') + '. Ela fica vazia. Mude o Olho X, Y ou Z do público, ou gire o cubo.'));
     if (tk.missing.length) b.appendChild(el('p', 'il-warn', 'Faces marcadas sem superfície ligada: ' + tk.missing.map(function (f) { return C.FACE_LABEL[f]; }).join(', ') + '. Elas ficam de fora até você ligar.'));
     return b;
   }
@@ -477,6 +488,11 @@
     S.raf = requestAnimationFrame(loop);
     if (!sec) return;
     if (!S.lastPoll || now - S.lastPoll > 350) { S.lastPoll = now; pollSelection(); }
+    // superfícies criadas, apagadas ou renomeadas depois de abrir o painel: atualiza as listas de ligação das faces
+    if (!S.lastSurfPoll || now - S.lastSurfPoll > 500) {
+      S.lastSurfPoll = now;
+      try { var sg = H.surfaces().map(function (x) { return x.s.key + ':' + x.s.name; }).join('|'); if (S.surfSig == null) S.surfSig = sg; else if (sg !== S.surfSig && sec.offsetParent) { S.surfSig = sg; render(); } } catch (e) {}
+    }
     if (!sec.offsetParent) return;
     if (S.playing) S.tFree = (now - S.t0) / 1000;
     paint();

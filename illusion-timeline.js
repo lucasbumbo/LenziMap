@@ -35,6 +35,8 @@
     batch.assetId = asset.id;
     var keys = IC.validateKeys(opts.keys || [], dur);
     keys.warnings.forEach(function (w) { warnings.push(w); });
+    var usedKey = {};
+    list.forEach(function (x) { if (usedKey[x.key]) warnings.push('A face ' + IC.FACE_LABEL[x.face] + ' usa a mesma superfície da face ' + IC.FACE_LABEL[usedKey[x.key]] + '. Ligue superfícies diferentes.'); else usedKey[x.key] = x.face; });
     list.forEach(function (x) {
       try {
         var rf = IC.resolveFace(stage, il, null, x.key, 0), rel = [rf.eye[0] - rf.frame.center[0], rf.eye[1] - rf.frame.center[1], rf.eye[2] - rf.frame.center[2]];
