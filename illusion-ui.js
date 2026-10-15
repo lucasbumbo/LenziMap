@@ -217,10 +217,11 @@
     Object.keys(defs).forEach(function (k) {
       var d = defs[k];
       rowS.appendChild(btn(d[0], function () {
+        S.sala = k; S.msg = 'Sala "' + d[0] + '" escolhida. Quando gostar da prévia, clique em Colocar na face.';
         C.ROOM_WALLS.forEach(function (w2) { S.il.room.walls[w2].on = !!d[1][w2]; });
         S.il.params.depth = Math.max(C.PARAMS.depth.min, Math.min(C.PARAMS.depth.max, d[2]));
         changed('il-room', true);
-      }, '', 'il-sala-' + k));
+      }, S.sala === k ? 'on' : '', 'il-sala-' + k));
     });
     b.appendChild(rowS);
     var ring = ['front', 'right', 'back', 'left'], ix = ring.indexOf(f0);
@@ -659,6 +660,12 @@
 
   function applyNow() {
     var keys = [];
+    // modo fácil: se a face escolhida ainda não tem tela, liga uma livre sozinho
+    if (!S.adv && S.il.preset === 'room-builder') {
+      var st0 = stage(), cu0 = C.cubeById(st0, S.il.target.cube), miss0 = [];
+      S.il.target.faces.forEach(function (g) { if (cu0 && !cu0.faces[g]) { var kk = freeSurfaceKey(); if (kk) bindSurface(cu0.id, g, kk); else miss0.push(C.FACE_LABEL[g]); } });
+      if (miss0.length) { S.msg = 'Falta uma superfície para a face ' + miss0.join(', ') + '. Clique em + Nova superfície (no topo), arraste os 4 cantos até a face do cubo e clique em Colocar na face de novo.'; render(); return; }
+    }
     if (S.quick && T.QUICK[S.il.preset]) keys = T.QUICK[S.il.preset][0].keys(S.dur);
     var b = T.apply(S.il, hostObj(), { duration: S.dur, keys: keys });
     if (b.ok) { S.assetId = b.assetId; S.il = clone(T.illusionOf(seq(), b.assetId) || S.il); S.msg = 'Aplicado: ' + b.clipIds.length + ' clipe(s) na timeline, começando em ' + b.at.toFixed(2) + ' s.' + (b.warnings.length ? ' Avisos: ' + b.warnings.join(' ') : ''); }
@@ -725,7 +732,7 @@
     H = host; sec = document.getElementById('il-panel');
     if (!sec || !C || !G || !T) return;
     if (!document.getElementById('il-css')) { var st = el('style'); st.id = 'il-css'; st.textContent = CSS; document.head.appendChild(st); }
-    S.faceIl = {}; S.faceIl = {}; newIllusion(S.adv ? 'infinite-room' : 'room-builder'); S.msg = '';
+    S.faceIl = {}; S.faceIl = {}; newIllusion(S.adv ? 'infinite-room' : 'room-builder'); S.msg = S.adv ? '' : 'Passo a passo: 1) face, 2) sala, 3) profundidade, depois Colocar na face.';
     if (!S.adv) { S.view = 'free'; S.il.camera.view = 'free'; S.orbit = { yaw: 30, pitch: 24, dist: 38 }; }
     S.t0 = performance.now();
     render();

@@ -191,6 +191,10 @@ Na aba **3D** agora abre direto o modo fácil:
 3. **Paredes e objetos**: marque Fundo, Parede esquerda, Parede direita, Chão e Teto, escolha cor e imagem ou GIF de cada uma, e adicione objetos (um bichinho em GIF, por exemplo).
 Depois, **Aplicar na Timeline**. Os tipos de ilusão, câmera, luz e geometria do palco ficam em **Mostrar opções avançadas** (no fim do painel). A escolha fica guardada.
 
+## 1.0.10 - Colocar na face liga a tela sozinho
+- Se a face escolhida ainda não tem superfície, o botão **Colocar na face** liga uma livre automaticamente. Antes dava erro.
+- A sala escolhida fica destacada e o painel diz o próximo passo.
+
 ## 1.0.9 - painel 3D em 4 passos
 - O painel 3D agora é uma sequência: 1. escolha a face, 2. escolha o tipo de sala (Corredor, Quarto, Caixa funda, Chão e fundo), 3. profundidade, 4. cores e imagens (opcional). Depois, **Colocar na face**.
 - Duração, tela da face, Girar, Inclinar e profundidade das paredes ficam em "Ajuste fino", fechado.
