@@ -191,6 +191,10 @@ Na aba **3D** agora abre direto o modo fácil:
 3. **Paredes e objetos**: marque Fundo, Parede esquerda, Parede direita, Chão e Teto, escolha cor e imagem ou GIF de cada uma, e adicione objetos (um bichinho em GIF, por exemplo).
 Depois, **Aplicar na Timeline**. Os tipos de ilusão, câmera, luz e geometria do palco ficam em **Mostrar opções avançadas** (no fim do painel). A escolha fica guardada.
 
+## 1.0.8 - painel 3D mais simples
+- Novo menu "Sala pronta": Corredor, Quarto, Caixa funda ou Chão e fundo. Um clique liga as camadas e ajusta a profundidade.
+- Girar o 3D, Inclinar o 3D e a profundidade de cada parede foram para "Ajuste fino", fechado por padrão.
+
 ## 1.0.7 - sala contínua na quina
 - Nova opção na caixa da face: "Sala contínua na quina". Escolha uma face e junte com a vizinha (Frente + Direita, Direita + Trás, Trás + Esquerda ou Esquerda + Frente).
 - As duas faces passam a mostrar uma sala só (chão, teto e duas paredes do fundo que se encontram), vista de um ponto na quina a 45 graus entre as duas. As linhas continuam de uma face para a outra.

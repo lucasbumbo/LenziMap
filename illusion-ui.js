@@ -209,7 +209,7 @@
   }
   function secEasy3d() {
     var f0 = curFace(), jn = isJoined() ? C.JOINS[S.il.room.join] : null, R = S.il.room;
-    var b = box('r3d', jn ? 'Sala contínua: ' + C.FACE_LABEL[jn.a] + ' + ' + C.FACE_LABEL[jn.b] : 'Face ' + C.FACE_LABEL[f0] + ': girar o 3D e camadas (fundo, lados, chão, teto)');
+    var b = box('r3d', jn ? 'Sala contínua: ' + C.FACE_LABEL[jn.a] + ' + ' + C.FACE_LABEL[jn.b] : 'Face ' + C.FACE_LABEL[f0] + ': escolha a sala e as camadas');
     S.rcv = null;
     var ring = ['front', 'right', 'back', 'left'], ix = ring.indexOf(f0);
     if (ix >= 0) {
@@ -217,12 +217,22 @@
       b.appendChild(selectRow('Sala contínua na quina', [['', 'Não, só esta face'], [kn, 'Com a face ' + C.FACE_LABEL[ring[(ix + 1) % 4]]], [kp, 'Com a face ' + C.FACE_LABEL[ring[(ix + 3) % 4]]]], function () { return R.join || ''; }, function (v) { setJoin(v); }, 'il-join'));
       if (jn) b.appendChild(el('p', 'il-note', 'As duas faces mostram uma sala só, vista de um ponto na quina (45 graus entre elas). Girar o 3D move esse ponto.'));
     }
-    slider(b, 'Girar o 3D (graus, esquerda/direita)', function () { return S.il.camera.yaw || 0; }, function (v) { S.il.camera.yaw = v; changed('il-cam'); }, -80, 80, 1);
-    slider(b, 'Inclinar o 3D (graus, cima/baixo)', function () { return S.il.camera.tilt || 0; }, function (v) { S.il.camera.tilt = v; changed('il-cam'); }, -60, 60, 1);
+    var presets = [['', 'Escolha uma sala pronta...'], ['corredor', 'Corredor (fundo, lados, chão e teto, bem fundo)'], ['quarto', 'Quarto (tudo fechado, médio)'], ['caixa', 'Caixa funda (só o fundo)'], ['chao', 'Chão e fundo']];
+    b.appendChild(selectRow('Sala pronta', presets, function () { return ''; }, function (v) {
+      var def = { corredor: { on: { back: 1, left: 1, right: 1, floor: 1, ceiling: 1 }, depth: 90 }, quarto: { on: { back: 1, left: 1, right: 1, floor: 1, ceiling: 1 }, depth: 40 }, caixa: { on: { back: 1 }, depth: 70 }, chao: { on: { back: 1, floor: 1 }, depth: 70 } }[v];
+      if (!def) return;
+      C.ROOM_WALLS.forEach(function (k) { S.il.room.walls[k].on = !!def.on[k]; });
+      S.il.params.depth = Math.max(C.PARAMS.depth.min, Math.min(C.PARAMS.depth.max, def.depth));
+      changed('il-room', true);
+    }, 'il-preset'));
     var P = C.PARAMS.depth;
     slider(b, 'Profundidade do fundo (pol)', function () { return S.il.params.depth; }, function (v) { S.il.params.depth = v; changed('il-p:depth'); }, P.min, P.max, P.step, { kf: 'depth' });
     var label = { back: 'Fundo', left: 'Parede esquerda', right: 'Parede direita', floor: 'Chão', ceiling: 'Teto' };
     if (jn) { label.back = 'Parede do fundo (direita)'; label.right = 'Parede do fundo (esquerda)'; }
+    var fino = el('details', 'il-box'); fino.id = 'il-fino'; fino.open = !!S.open.fino; fino.addEventListener('toggle', function () { S.open.fino = fino.open; });
+    fino.appendChild(el('summary', null, 'Ajuste fino (só se as linhas não fecharem no cubo real)'));
+    slider(fino, 'Girar o 3D (graus, esquerda/direita)', function () { return S.il.camera.yaw || 0; }, function (v) { S.il.camera.yaw = v; changed('il-cam'); }, -80, 80, 1);
+    slider(fino, 'Inclinar o 3D (graus, cima/baixo)', function () { return S.il.camera.tilt || 0; }, function (v) { S.il.camera.tilt = v; changed('il-cam'); }, -60, 60, 1);
     C.ROOM_WALLS.forEach(function (k) {
       if (jn && k === 'left') return;
       var w = R.walls[k], row = el('div', 'il-row'); row.dataset.wall = k;
@@ -234,8 +244,9 @@
       row.appendChild(col);
       row.appendChild(mediaPicker(w.media, function (m) { w.media = m; changed('il-room', true); }, 'il-wallm-' + k));
       b.appendChild(row);
-      if (!jn && w.on && k !== 'back') slider(b, C.WALL_LABEL[k] + ': profundidade para dentro (pol)', function () { return w.d; }, function (v) { w.d = v; changed('il-room-d'); }, 0, 14, 0.5);
+      if (!jn && w.on && k !== 'back') slider(fino, C.WALL_LABEL[k] + ': profundidade para dentro (pol)', function () { return w.d; }, function (v) { w.d = v; changed('il-room-d'); }, 0, 14, 0.5);
     });
+    b.appendChild(fino);
     return b;
   }
   function secTarget() {

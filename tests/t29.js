@@ -5,6 +5,7 @@ let fails=0,n=0;function assert(c,m){n++;if(c)console.log('PASS '+m);else{fails+
  const h=await open(8946,{easy:true,w:1300,h:1900}),p=h.p;
  for(let i=0;i<3;i++){await p.click('#btn-newbox');await p.waitForTimeout(250);}
  await p.click('[data-go="ilusao"]');await p.waitForTimeout(1500);
+ await p.evaluate(()=>{const d=document.getElementById('il-fino');if(d)d.open=true;});await p.waitForTimeout(200);
  const num=(lab)=>p.locator('input[type=number][aria-label="'+lab+' valor"]');
  const GIRAR='Girar o 3D (graus, esquerda/direita)',PROF='Profundidade do fundo (pol)';
  assert(await p.locator('text=Girar o 3D').count()>=1&&await p.locator('text=Inclinar o 3D').count()>=1&&await p.locator('text=Profundidade do fundo').count()>=1,'painel tem Girar, Inclinar e Profundidade');
@@ -25,6 +26,7 @@ let fails=0,n=0;function assert(c,m){n++;if(c)console.log('PASS '+m);else{fails+
  const fl=await p.evaluate(()=>window.IllusionUI.state.il.room.walls.floor.on);
  assert(fl===true,'chão vem ligado');
  await p.uncheck('#il-wall-floor');await p.waitForTimeout(300);await p.check('#il-wall-floor');await p.waitForTimeout(300);
+ await p.evaluate(()=>{const d=document.getElementById('il-fino');if(d&&!d.open)d.open=true;});await p.waitForTimeout(200);
  const FL='Chão: profundidade para dentro (pol)';
  assert(await num(FL).count()===1,'chão tem ajuste de profundidade');
  await num(FL).fill('4');await num(FL).press('Tab');await p.waitForTimeout(300);
@@ -41,6 +43,12 @@ let fails=0,n=0;function assert(c,m){n++;if(c)console.log('PASS '+m);else{fails+
  await num(GIRAR).fill('10');await num(GIRAR).press('Tab');await p.waitForTimeout(400);
  const cl2=await p.evaluate(()=>window.TimelineUI._h.tl.seq.assets.filter(a=>a.fx&&a.fx.illusion).map(a=>a.fx.illusion.camera.yaw+'/'+a.fx.illusion.target.faces.join()));
  assert(cl2.indexOf('10/right')>=0&&cl2.indexOf('25/front')>=0,'mudar a Direita depois de aplicar atualiza só o clipe dela ('+cl2.join(' ; ')+')');
+ await p.selectOption('#il-preset','caixa');await p.waitForTimeout(400);
+ const on=await Promise.all(['back','left','right','floor','ceiling'].map(k=>p.locator('#il-wall-'+k).isChecked()));
+ assert(JSON.stringify(on)==='[true,false,false,false,false]','sala pronta Caixa funda: só o fundo '+JSON.stringify(on));
+ await p.selectOption('#il-preset','corredor');await p.waitForTimeout(400);
+ const on2=await Promise.all(['back','left','right','floor','ceiling'].map(k=>p.locator('#il-wall-'+k).isChecked()));
+ assert(on2.every(x=>x),'sala pronta Corredor: todas as camadas');
  assert(h.errs.length===0,'erros de página: nenhum ('+h.errs.join('|')+')');
  await h.close();console.log(n+' testes, '+fails+' falhas');process.exit(fails?1:0);
 })();
