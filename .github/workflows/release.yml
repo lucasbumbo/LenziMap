@@ -1,0 +1,35 @@
+name: Publicar versão do LenziMap
+
+# Para lançar uma atualização: aumente "version" no package.json, faça commit e crie a tag, por exemplo:
+#   git tag v1.0.1 && git push origin v1.0.1
+# O GitHub compila o app para Mac e publica a release. O app instalado se atualiza sozinho.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - name: Conferir empacotamento
+        run: node tests/package-check.js
+      - name: Conferir versão da tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          V=$(node -p "require('./package.json').version")
+          if [ "v$V" != "${GITHUB_REF_NAME}" ]; then echo "A tag ${GITHUB_REF_NAME} não bate com a versão $V do package.json"; exit 1; fi
+      - name: Compilar e publicar
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: npx electron-builder --mac --publish always -c.publish.releaseType=release

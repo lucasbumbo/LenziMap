@@ -1,0 +1,774 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' file: data: blob:; media-src 'self' file: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'">
+<title>LenziMap</title>
+<style>
+/* Layout: palco com as guias de edição à esquerda, painel de 360px à direita. A proporção do palco segue o monitor escolhido na saída. */
+:root{
+  --bg:#0e1116; --panel:#151a21; --panel-2:#1b212a; --line:#2a313c;
+  --fg:#e8ebf0; --muted:#8e97a6; --accent:#ff4fa3; --accent-ink:#1a0610; --stage:#000000;
+  --font-body:-apple-system,BlinkMacSystemFont,'Helvetica Neue',system-ui,sans-serif;
+  --font-mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+  --arn:1.7778;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;padding:16px;background:var(--bg);color:var(--fg);font:14px/1.45 var(--font-body)}
+p{margin:0}
+h1{font:700 24px/1.05 var(--font-body);letter-spacing:-.01em;margin:0 0 8px}
+h2{font:500 11px/1 var(--font-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0}
+
+.app{height:100%;display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:16px}
+
+.stage-wrap{position:relative;min-height:0;min-width:0;display:grid;place-items:center;container-type:size;padding:12px;background:var(--panel);border:1px solid var(--line);border-radius:8px}
+.stage{position:relative;width:min(100cqw,calc(100cqh*var(--arn)));aspect-ratio:var(--arn);background:var(--stage);overflow:hidden;user-select:none;-webkit-user-select:none}
+.xs{position:absolute;left:0;top:0;display:block;max-width:none;max-height:none;pointer-events:none}
+.surf{position:absolute;left:0;top:0;display:block;transform-origin:0 0;max-width:none;max-height:none;pointer-events:none;user-select:none;-webkit-user-select:none}
+.overlay{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
+.overlay.off{display:none}
+.q-sel{fill:none;stroke:var(--accent);stroke-width:1.5;stroke-dasharray:6 4}
+.q-other{fill:transparent;stroke:rgba(255,255,255,.35);stroke-width:1}
+.q-hidden{fill:none;stroke:rgba(255,255,255,.18);stroke-width:1;stroke-dasharray:2 4}
+.h-corner{fill:var(--accent);stroke:#fff;stroke-width:2;cursor:grab}
+.h-label{font:500 11px var(--font-mono);fill:#fff;paint-order:stroke;stroke:#000;stroke-width:3px;pointer-events:none}
+.m-poly{fill:rgba(255,79,163,.14);stroke:#fff;stroke-width:1.5}
+.q-mesh{fill:none;stroke:rgba(255,255,255,.55);stroke-width:1}
+.h-mesh{fill:var(--accent);stroke:#fff;stroke-width:1.5;cursor:grab}
+.h-xc{fill:#fff;stroke:#8c5cff;stroke-width:2;cursor:nwse-resize;filter:drop-shadow(0 1px 3px rgba(0,0,0,.5))}
+.h-xe{fill:#fff;stroke:#8c5cff;stroke-width:1.5;cursor:pointer;filter:drop-shadow(0 1px 3px rgba(0,0,0,.5))}
+.h-xr{fill:#fff;stroke:#8c5cff;stroke-width:1.5;cursor:grab;filter:drop-shadow(0 1px 3px rgba(0,0,0,.5))}
+.h-xg{font:700 15px sans-serif;fill:#6a3df0;pointer-events:none;text-anchor:middle;dominant-baseline:central}
+.q-x{fill:none;stroke:#8c5cff;stroke-width:2}
+.h-mask{fill:#fff;stroke:var(--accent);stroke-width:2;cursor:grab}
+.badge{position:absolute;left:10px;top:10px;font:500 11px var(--font-mono);letter-spacing:.1em;text-transform:uppercase;color:#fff;background:rgba(255,79,163,.9);padding:4px 8px;border-radius:4px;pointer-events:none}
+
+.panel{min-height:0;min-width:0;overflow:auto;display:flex;flex-direction:column;gap:20px;padding:18px;background:var(--panel);border:1px solid var(--line);border-radius:8px}
+.brand p{color:var(--muted)}
+.sec{display:flex;flex-direction:column;gap:10px}
+.sec-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.row{display:flex;flex-wrap:wrap;gap:8px}
+.hint{color:var(--muted);font-size:13px}
+
+.btn{font:inherit;padding:8px 12px;border:1px solid var(--line);background:var(--panel-2);color:var(--fg);border-radius:6px;cursor:pointer}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:transparent;font-weight:600}
+.btn.on{border-color:var(--accent)}
+.btn.small{padding:4px 8px;font-size:12px}
+button:disabled,input:disabled,select:disabled{opacity:.45;cursor:not-allowed}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{font:inherit;padding:8px;background:var(--panel-2);color:var(--muted);border:0;cursor:pointer}
+.seg button.on{background:var(--accent);color:var(--accent-ink);font-weight:600}
+
+.field{display:flex;flex-direction:column;gap:6px}
+.field span{display:flex;justify-content:space-between;color:var(--muted)}
+.field output{font-family:var(--font-mono);color:var(--fg)}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.field textarea,.field select,.field input[type=text],select.pick{font:inherit;color:var(--fg);background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:8px;width:100%}
+.field textarea{resize:vertical;min-height:64px}
+select.pick{width:auto}
+input[type=color]{width:48px;height:34px;padding:2px;border:1px solid var(--line);background:var(--panel-2);border-radius:6px;cursor:pointer}
+.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:8px}
+.card{font:inherit;color:var(--fg);background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:4px;cursor:pointer;display:flex;flex-direction:column;gap:4px;text-align:left;min-width:0}
+.card:hover,.card:focus-visible{border-color:var(--accent)}
+.card canvas,.card img,.card video{width:100%;aspect-ratio:16/9;object-fit:cover;background:#000;border-radius:4px;display:block}
+.card .cn{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cat{grid-column:1/-1;color:var(--muted);font-size:12px;margin-top:6px}
+summary{cursor:pointer;padding:4px 0}
+.item.dragover{border-style:dashed;border-color:var(--accent)}
+.item[draggable=true]{cursor:grab}
+.q-empty{fill:var(--muted);font-size:14px;text-anchor:middle;pointer-events:none}
+.ex-row{display:flex;flex-direction:column;gap:6px;padding:8px;border:1px solid var(--line);border-radius:6px;margin-top:6px}
+.ex-row input[type=text]{flex:1;min-width:80px;font:inherit;color:var(--fg);background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:6px}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;padding-bottom:4px}
+.tab{font:inherit;font-size:13px;white-space:nowrap;padding:5px 10px;border:1px solid var(--line);background:var(--panel-2);color:var(--muted);border-radius:999px;cursor:pointer}
+.tab.on{background:var(--accent);color:var(--accent-ink);border-color:transparent;font-weight:600}
+.gcard{position:relative;min-width:0}
+.gcard .card{width:100%}
+.fav{position:absolute;right:6px;top:6px;width:26px;height:26px;border-radius:50%;border:0;background:rgba(0,0,0,.55);color:#fff;font-size:15px;line-height:1;cursor:pointer;padding:0}
+.fav.on{color:#ffd23d}
+.gtype{position:absolute;left:6px;top:6px;font:500 9px/1 var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:#fff;background:rgba(0,0,0,.55);padding:3px 5px;border-radius:3px;pointer-events:none}
+.meter{height:10px;border-radius:5px;background:var(--panel-2);border:1px solid var(--line);overflow:hidden}
+#mic-fill{height:100%;width:0;background:var(--accent);transition:width .05s linear}
+.sub canvas#photo-cv{width:100%;height:auto;border:1px solid var(--line);border-radius:6px;background:#000}
+.sub{display:flex;flex-direction:column;gap:10px;padding-top:12px;border-top:1px solid var(--line)}
+
+.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.item{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto auto;gap:4px;align-items:center;padding:4px;border:1px solid var(--line);border-radius:6px;background:var(--panel-2)}
+.item[data-sel="true"]{border-color:var(--accent)}
+.item[data-off="true"] .item-main{opacity:.45}
+.item-main{font:inherit;color:var(--fg);background:none;border:0;text-align:left;padding:6px 8px;cursor:pointer;min-width:0;display:flex;flex-direction:column;gap:2px}
+.item-main .name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tag{font:500 10px/1 var(--font-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.mini{font:inherit;width:28px;height:28px;border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:6px;cursor:pointer;line-height:1}
+.mini:hover{border-color:var(--muted)}
+.mini.on{border-color:var(--accent);color:var(--accent)}
+.empty{color:var(--muted);padding:8px 2px}
+
+/* Abas do painel */
+.pbar{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.pbar-sp{flex:1}.pbar .btn.small{padding:4px 10px}
+.phead{position:sticky;top:-18px;z-index:5;margin:-18px -18px 0;padding:10px 18px 8px;background:var(--panel);border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:6px}
+.phead .hint{margin:0;font-size:12px;line-height:1.35;max-height:3.1em;overflow:hidden}
+.ptabs{display:flex;gap:4px;flex-wrap:wrap}
+.ptabs button{flex:1 1 20%;min-width:0;font:inherit;font-size:12px;padding:7px 2px;overflow:hidden;text-overflow:ellipsis;border:1px solid var(--line);background:var(--panel-2);color:var(--muted);border-radius:8px;cursor:pointer;white-space:nowrap}
+.ptabs button[aria-selected="true"]{background:var(--accent);color:var(--accent-ink);border-color:transparent;font-weight:600}
+.sheet-grip{display:none}
+.panel [data-tab]{display:none}
+.panel[data-active="saida"] [data-tab="saida"],.panel[data-active="cenas"] [data-tab="cenas"],.panel[data-active="camadas"] [data-tab="camadas"],.panel[data-active="galeria"] [data-tab="galeria"],.panel[data-active="ajustes"] [data-tab="ajustes"],.panel[data-active="timeline"] [data-tab="timeline"],.panel[data-active="ia"] [data-tab="ia"],.panel[data-active="ilusao"] [data-tab="ilusao"],.panel[data-active="arvore"] [data-tab="arvore"]{display:flex}
+.panel[data-active="saida"] header.brand[data-tab]{display:block}
+/* Barra flutuante sobre a superfície */
+.ftool{position:absolute;z-index:6;display:flex;gap:2px;padding:4px;background:#fff;border-radius:10px;box-shadow:0 4px 14px rgba(0,0,0,.45);transform:translateX(-50%);pointer-events:auto}
+.ftool[hidden]{display:none}
+.ftool button{width:34px;height:34px;display:grid;place-items:center;border:0;border-radius:7px;background:transparent;color:#2b2b3a;cursor:pointer;padding:0}
+.ftool button:hover{background:#eceaf8}
+.ftool button.on{background:#e4dcff;color:#5b2fe0}
+.ftool svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ftool.drag{opacity:0;pointer-events:none}
+
+.ptabs{flex-wrap:wrap}
+.ptabs button{flex:1 1 22%;padding-left:4px;padding-right:4px}
+.pstat{display:flex;align-items:center;gap:6px}
+.pstat .hint{flex:1 1 auto;min-width:0}
+.pstat button{flex:0 0 auto;font:inherit;font-size:12px;border:1px solid var(--line);background:var(--panel-2);color:var(--muted);border-radius:999px;cursor:pointer;padding:5px 10px;height:30px}
+.pstat .help-btn{width:30px;padding:0;font-weight:700}
+.pstat .live-tab[aria-selected="true"]{background:#ff3b3b;border-color:#ff3b3b;color:#fff}
+.pstat .live-tab[aria-selected="true"]::before{background:#fff}
+.pstat .live-tab::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:#ff3b3b;margin-right:5px}
+.panel[data-active="live"] [data-tab="live"]{display:flex}
+.numgrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.numgrid label{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--muted)}
+.numgrid input{width:100%;min-width:0;font:inherit;font-size:13px;padding:6px 4px;border:1px solid var(--line);background:var(--panel-2);color:var(--fg);border-radius:6px}
+.live-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px}
+.live-grid .btn,.live-big{min-height:64px;font-size:18px;font-weight:600}
+.live-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.live-big{width:100%}
+#live-black[aria-pressed="true"]{background:#ff3b3b;border-color:#ff3b3b;color:#fff}
+.item .thumb{width:56px;height:32px;border-radius:4px;background:#000;border:1px solid var(--line);display:block}
+.looks{display:flex;flex-wrap:wrap;gap:6px}
+.looks .btn{padding:6px 10px;font-size:12px}
+.pal-card{width:min(560px,100%);gap:8px}
+#pal-q{width:100%;font-size:16px;padding:12px 14px;border-radius:10px}
+#pal-list{list-style:none;margin:0;padding:0;max-height:52dvh;overflow:auto;display:flex;flex-direction:column;gap:2px}
+#pal-list li{display:flex;justify-content:space-between;gap:12px;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:14px}
+#pal-list li small{opacity:.6;white-space:nowrap}
+#pal-list li[aria-selected="true"],#pal-list li:hover{background:var(--accent,#ff4fa3);color:#fff}
+.modal{position:fixed;inset:0;z-index:50;background:rgba(5,6,10,.7);display:grid;place-items:center;padding:16px}
+.modal[hidden]{display:none}
+.modal-card{width:min(460px,100%);max-height:90dvh;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:12px}
+.modal-card h2{margin:0;font-size:20px}
+.tour-p{margin:0;line-height:1.5}
+.keys{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;font-size:13px}
+.keys li{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+kbd{font:600 12px var(--font-mono);background:var(--panel-2);border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:2px 6px}
+.ctxmenu{position:fixed;z-index:60;min-width:190px;background:#fff;color:#22222e;border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.5);padding:6px;display:flex;flex-direction:column}
+.ctxmenu[hidden]{display:none}
+.ctxmenu button{font:inherit;font-size:14px;text-align:left;background:none;border:0;border-radius:6px;padding:8px 10px;color:inherit;cursor:pointer}
+.ctxmenu button:hover{background:#eceaf8}
+.ctxmenu hr{border:0;border-top:1px solid #e3e1ee;margin:4px 0;width:100%}
+.item{grid-template-columns:auto auto minmax(0,1fr) auto auto auto}
+</style>
+</head>
+<body>
+<div class="app">
+  <main class="stage-wrap">
+    <div id="stage" class="stage">
+      <svg id="overlay" class="overlay" aria-label="Guias de edição"></svg>
+      <div id="badge" class="badge" hidden>Blackout</div>
+
+    </div>
+    <div id="ftool" class="ftool" role="toolbar" aria-label="Ações da superfície" hidden>
+        <button type="button" data-a="dup" title="Duplicar" aria-label="Duplicar"><svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg></button>
+        <button type="button" data-a="fx" title="Espelhar na horizontal" aria-label="Espelhar na horizontal"><svg viewBox="0 0 24 24"><path d="M12 3v18"/><path d="M8 7 3 12l5 5z"/><path d="m16 7 5 5-5 5z"/></svg></button>
+        <button type="button" data-a="fy" title="Espelhar na vertical" aria-label="Espelhar na vertical"><svg viewBox="0 0 24 24"><path d="M3 12h18"/><path d="M7 8 12 3l5 5z"/><path d="m7 16 5 5 5-5z"/></svg></button>
+        <button type="button" data-a="rot" title="Girar 90 graus" aria-label="Girar 90 graus"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.5-5.8"/><path d="M20 4v5h-5"/></svg></button>
+        <button type="button" data-a="lock" title="Travar" aria-label="Travar"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></button>
+        <button type="button" data-a="del" title="Apagar" aria-label="Apagar"><svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/></svg></button>
+      </div>
+  </main>
+
+  <aside class="panel" aria-label="Controles">
+    <div class="phead">
+      <button id="sheet-grip" class="sheet-grip" type="button" aria-label="Subir ou descer o painel"><span></span></button>
+      <nav id="ptabs" class="ptabs" role="tablist" aria-label="Seções do painel">
+        <button type="button" role="tab" data-go="camadas">Camadas</button>
+        <button type="button" role="tab" data-go="galeria">Galeria</button>
+        <button type="button" role="tab" data-go="ajustes">Ajustes</button>
+        <button type="button" role="tab" data-go="timeline">Timeline</button>
+        <button type="button" role="tab" data-go="ia">IA</button>
+        <button type="button" role="tab" data-go="ilusao" title="3D Illusion Creator">3D</button>
+        <button type="button" role="tab" data-go="arvore" title="Estrutura: cenas, cubos, faces, camadas e clipes">Árvore</button>
+        <button type="button" role="tab" data-go="cenas">Cenas</button>
+        <button type="button" role="tab" data-go="saida">Saída</button>
+      </nav>
+      <div class="pstat">
+        <p id="status" class="hint" role="status">Pronto. A superfície está vazia: adicione mídia, texto ou efeito em Conteúdo da superfície e arraste os cantos.</p>
+        <button type="button" data-go="live" class="live-tab" aria-selected="false">Ao vivo</button>
+        <button id="btn-help" type="button" class="help-btn" aria-label="Ajuda e atalhos" title="Ajuda e atalhos (?)">?</button>
+      </div>
+    </div>
+    <div class="pbar" role="toolbar" aria-label="Projeto">
+      <button id="btn-new" class="btn small" type="button" title="Começar um projeto em branco">Novo</button>
+      <button id="btn-open" class="btn small" type="button" title="Abrir um projeto salvo">Abrir</button>
+      <button id="btn-save" class="btn small" type="button" title="Salvar o projeto">Salvar</button>
+      <span class="pbar-sp"></span>
+      <button id="btn-undo" class="btn small" type="button" title="Desfazer">Desfazer</button>
+      <button id="btn-redo" class="btn small" type="button" title="Refazer">Refazer</button>
+    </div>
+    <header class="brand" data-tab="saida">
+      <h1>LenziMap</h1>
+      <p>GIF, vídeo, foto, texto e efeitos em qualquer superfície. Sem marca d'água.</p>
+    </header>
+
+    <section class="sec" data-tab="saida" aria-labelledby="h-out">
+      <h2 id="h-out">Saída</h2>
+      <label class="field" for="display">
+        <span>Monitor</span>
+        <select id="display"></select>
+      </label>
+      <div class="row">
+        <button id="btn-out" class="btn primary" type="button">Enviar pra tela</button>
+        <button id="btn-refresh" class="btn" type="button">Atualizar telas</button>
+      </div>
+      <label class="field" for="master">
+        <span>Brilho da saída <output id="master-val">100%</output></span>
+        <input id="master" type="range" min="0" max="100" value="100">
+      </label>
+      <div class="row">
+        <button id="btn-black" class="btn" type="button" aria-pressed="false">Blackout (B)</button>
+      </div>
+      <div id="rec-row" class="row">
+        <button id="btn-rec" class="btn" type="button" aria-pressed="false">Gravar saída</button>
+      </div>
+      <p id="out-hint" class="hint">Esc na tela de saída fecha.</p>
+    </section>
+
+    <section class="sec" data-tab="saida" aria-labelledby="h-sound">
+      <h2 id="h-sound">Som</h2>
+      <div class="row">
+        <button id="btn-mic" class="btn" type="button" aria-pressed="false">Ligar microfone</button>
+      </div>
+      <div class="meter" aria-hidden="true"><div id="mic-fill"></div></div>
+      <label class="field" for="mic-gain">
+        <span>Sensibilidade <output id="mic-gain-val">100%</output></span>
+        <input id="mic-gain" type="range" min="20" max="400" value="100">
+      </label>
+      <p class="hint">Ligue o microfone e, em cada superfície, aumente Reação ao som. O brilho ou a opacidade passam a pulsar com os graves.</p>
+    </section>
+
+    <section class="sec" data-tab="timeline" id="tl-insp" aria-label="Inspetor da timeline"></section>
+    <section class="sec" data-tab="ia" id="ai-panel" aria-label="AI Director"></section>
+    <section class="sec" data-tab="ilusao" id="il-panel" aria-label="3D Illusion Creator"></section>
+    <section class="sec" data-tab="arvore" id="hr-panel" aria-label="Estrutura do projeto"></section>
+
+    <section class="sec" data-tab="cenas" aria-labelledby="h-scenes">
+      <h2 id="h-scenes">Cenas</h2>
+      <div id="scenes" class="row"></div>
+      <div class="row">
+        <button id="scene-add" class="btn small" type="button">+ Cena vazia</button>
+        <button id="scene-dup" class="btn small" type="button">Duplicar cena</button>
+        <button id="scene-del" class="btn small" type="button">Apagar cena</button>
+      </div>
+      <div class="row">
+        <button id="scene-auto" class="btn small" type="button" aria-pressed="false">Trocar cenas sozinho</button>
+        <select id="scene-secs" class="pick" aria-label="Tempo padrão entre cenas">
+          <option value="3">3 s</option>
+          <option value="5" selected>5 s</option>
+          <option value="10">10 s</option>
+          <option value="20">20 s</option>
+          <option value="30">30 s</option>
+        </select>
+      </div>
+      <label class="field" for="scene-dur">
+        <span>Esta cena dura</span>
+        <select id="scene-dur">
+          <option value="0">O tempo padrão</option>
+          <option value="2">2 s</option>
+          <option value="3">3 s</option>
+          <option value="5">5 s</option>
+          <option value="8">8 s</option>
+          <option value="10">10 s</option>
+          <option value="15">15 s</option>
+          <option value="20">20 s</option>
+          <option value="30">30 s</option>
+          <option value="60">60 s</option>
+        </select>
+      </label>
+      <div class="row">
+        <button id="tap" class="btn" type="button">Toque o tempo (T)</button>
+        <output id="bpm" class="hint">-- BPM</output>
+        <select id="beats" aria-label="Batidas por cena">
+          <option value="1">a cada 1 batida</option>
+          <option value="2">a cada 2</option>
+          <option value="4" selected>a cada 4</option>
+          <option value="8">a cada 8</option>
+          <option value="16">a cada 16</option>
+        </select>
+      </div>
+      <p class="hint">Toque o botão no ritmo da música: o tempo padrão de troca passa a ser o número de batidas escolhido.</p>
+      <p class="hint">Teclas 1 a 9 trocam de cena, com fade. Com Trocar cenas sozinho ligado, cada cena usa o tempo dela, ou o padrão.</p>
+    </section>
+
+
+    <section class="sec" data-tab="camadas" aria-labelledby="h-layers">
+      <div class="sec-head">
+        <h2 id="h-layers">Superfícies</h2>
+        <button id="btn-newbox" class="btn small" type="button">+ Nova superfície</button>
+      </div>
+      <label class="field" for="layout-pick">
+        <span>Layouts prontos (já vêm com a grade neon)</span>
+        <select id="layout-pick"><option value="">Escolher layout...</option></select>
+      </label>
+      <div class="row">
+        <button id="btn-photo" class="btn small" type="button">Forma a partir de uma foto</button>
+        <input id="photo-file" type="file" accept="image/*" hidden>
+      </div>
+      <div id="photo-panel" class="sub" hidden>
+        <p class="hint">Foto de um objeto, porta, janela ou parede, de preferência com fundo diferente do objeto. O contorno aparece em rosa.</p>
+        <canvas id="photo-cv" width="320" height="180" aria-label="Prévia do contorno detectado"></canvas>
+        <label class="field" for="photo-sens">
+          <span>Sensibilidade <output id="photo-sens-val">100%</output></span>
+          <input id="photo-sens" type="range" min="30" max="300" value="100">
+        </label>
+        <div class="row">
+          <button id="photo-invert" class="btn small" type="button" aria-pressed="false">Inverter (objeto claro no fundo escuro)</button>
+        </div>
+        <p id="photo-info" class="hint"></p>
+        <div class="row">
+          <button id="photo-make" class="btn primary" type="button">Criar superfície com essa forma</button>
+          <button id="photo-cancel" class="btn" type="button">Cancelar</button>
+        </div>
+      </div>
+      <ul id="list" class="list"></ul>
+    </section>
+
+    <section class="sec" data-tab="camadas" aria-labelledby="h-items">
+      <h2 id="h-items">Conteúdo da superfície</h2>
+      <p id="items-hint" class="hint"></p>
+      <div class="row">
+        <button id="btn-add" class="btn small" type="button">+ Mídia</button>
+        <button id="btn-text" class="btn small" type="button">+ Texto</button>
+        <button id="add-test" class="btn small" type="button">+ Padrão de teste</button>
+        <button id="add-cam" class="btn small" type="button">+ Câmera ao vivo</button>
+      </div>
+      <ul id="items" class="list"></ul>
+      <div id="item-ctl" class="sub" hidden>
+        <div class="row">
+          <p class="hint">Item selecionado: <strong id="item-name"></strong></p>
+          <button id="btn-item-dup" class="btn small" type="button">Duplicar item</button>
+        </div>
+        <label class="field" for="item-opacity">
+          <span>Opacidade do item <output id="io-val">100%</output></span>
+          <input id="item-opacity" type="range" min="0" max="100" value="100">
+        </label>
+        <div class="row">
+          <button id="btn-cover" class="btn small" type="button" aria-pressed="false" title="Pinta de preto o fundo deste item. O que está abaixo some atrás dele.">Cobrir o que está abaixo</button>
+          <button id="btn-front" class="btn small" type="button">Para frente</button>
+          <button id="btn-back" class="btn small" type="button">Para trás</button>
+        </div>
+        <label class="field" for="item-blend">
+          <span>Mistura com o que está abaixo</span>
+          <select id="item-blend">
+            <option value="normal">Normal (cobre)</option>
+            <option value="screen">Somar luz (screen)</option>
+            <option value="multiply">Subtrair luz (multiply)</option>
+            <option value="difference">Diferença</option>
+          </select>
+        </label>
+        <label id="fit-row" class="field" for="item-fit" hidden>
+          <span>Encaixe na superfície</span>
+          <select id="item-fit">
+            <option value="fill">Esticar até os cantos</option>
+            <option value="cover">Preencher (corta o excesso)</option>
+            <option value="contain">Inteiro (pode sobrar borda)</option>
+          </select>
+        </label>
+        <label id="speed-row" class="field" for="speed" hidden>
+          <span>Velocidade do vídeo <output id="s-val">1x</output></span>
+          <input id="speed" type="range" min="0.25" max="3" step="0.25" value="1">
+        </label>
+      <div id="fx-ctl" class="sub" hidden>
+        <label class="field" for="fx-kind">
+          <span>Efeito</span>
+          <select id="fx-kind"></select>
+        </label>
+        <div class="row">
+          <label class="field" for="fx-color">
+            <span>Cor</span>
+            <input id="fx-color" type="color" value="#ff4fa3">
+          </label>
+          <label class="field" for="fx-color2">
+            <span>Cor 2</span>
+            <input id="fx-color2" type="color" value="#ff4fa3">
+          </label>
+          <button id="fx-color2-auto" class="btn small" type="button" title="Escolhe a cor 2 sozinho">Auto</button>
+        </div>
+        <label class="field" for="fx-scale">
+          <span>Escala <output id="fx-scale-val">1x</output></span>
+          <input id="fx-scale" type="range" min="0.5" max="3" step="0.1" value="1">
+        </label>
+        <label class="field" for="fx-speed">
+          <span>Velocidade <output id="fx-speed-val">1x</output></span>
+          <input id="fx-speed" type="range" min="0.2" max="3" step="0.1" value="1">
+        </label>
+      </div>
+      <div id="text-ctl" class="sub" hidden>
+        <label class="field" for="text-value">
+          <span>Texto</span>
+          <textarea id="text-value" rows="3"></textarea>
+        </label>
+        <label class="field" for="text-font">
+          <span>Fonte</span>
+          <select id="text-font">
+            <option value="'Helvetica Neue', Helvetica, Arial, sans-serif">Helvetica Neue</option>
+            <option value="'Arial Black', Arial, sans-serif">Arial Black</option>
+            <option value="Georgia, serif">Georgia</option>
+            <option value="Menlo, monospace">Menlo</option>
+            <option value="Impact, 'Arial Narrow', sans-serif">Impact</option>
+            <option value="'Brush Script MT', cursive">Brush Script</option>
+            <option value="Futura, 'Trebuchet MS', sans-serif">Futura</option>
+          </select>
+        </label>
+        <label class="field" for="text-size">
+          <span>Tamanho <output id="size-val">220</output></span>
+          <input id="text-size" type="range" min="40" max="500" step="10" value="220">
+        </label>
+        <div class="row">
+          <label class="field" for="text-color">
+            <span>Cor</span>
+            <input id="text-color" type="color" value="#ffffff">
+          </label>
+          <label class="field" for="text-ocolor">
+            <span>Contorno</span>
+            <input id="text-ocolor" type="color" value="#000000">
+          </label>
+        </div>
+        <label class="field" for="text-outline">
+          <span>Espessura do contorno <output id="outline-val">0</output></span>
+          <input id="text-outline" type="range" min="0" max="40" step="1" value="0">
+        </label>
+        <div class="row">
+          <button id="text-bold" class="btn small" type="button" aria-pressed="true">Negrito</button>
+          <button id="text-shadow" class="btn small" type="button" aria-pressed="false">Sombra</button>
+        </div>
+        <label class="field" for="text-align">
+          <span>Alinhamento</span>
+          <select id="text-align">
+            <option value="center">Centro</option>
+            <option value="left">Esquerda</option>
+            <option value="right">Direita</option>
+          </select>
+        </label>
+        <label class="field" for="text-anim">
+          <span>Animação</span>
+          <select id="text-anim">
+            <option value="none">Nenhuma</option>
+            <option value="piscar">Piscar</option>
+            <option value="digitar">Digitar</option>
+            <option value="rolar">Rolar (letreiro)</option>
+          </select>
+        </label>
+        <label class="field" for="text-speed">
+          <span>Velocidade da animação <output id="text-speed-val">1x</output></span>
+          <input id="text-speed" type="range" min="0.2" max="3" step="0.1" value="1">
+        </label>
+      </div>
+      </div>
+    </section>
+
+    <section class="sec" data-tab="galeria" aria-labelledby="h-libs">
+      <h2 id="h-libs">Galeria</h2>
+      <p class="hint">Toque num item para colocar dentro da superfície selecionada. A estrela guarda nos favoritos.</p>
+      <label class="field" for="gal-search">
+        <span>Buscar</span>
+        <input id="gal-search" type="text" maxlength="40">
+      </label>
+      <div class="row"><button id="gal-random" class="btn" type="button" title="Escolhe um efeito e uma cor ao acaso e coloca na superfície">Surpreenda-me</button><button id="gal-pal" class="btn" type="button" title="Buscar qualquer coisa (Cmd+K)">Buscar tudo (Cmd+K)</button></div>
+      <div id="gal-tabs" class="tabs" role="tablist" aria-label="Categorias"></div>
+      <p id="gal-info" class="hint"></p>
+      <div id="gal-grid" class="cards"></div>
+      <div class="row">
+        <button id="lib-pick" class="btn small" type="button">Escolher minha pasta</button>
+        <button id="lib-reload" class="btn small" type="button">Atualizar</button>
+      </div>
+    </section>
+
+    <section class="sec" data-tab="ajustes" aria-labelledby="h-sel">
+      <h2 id="h-sel">Superfície selecionada</h2>
+      <label class="field" for="layer-name">
+        <span>Nome</span>
+        <input id="layer-name" type="text" maxlength="60">
+      </label>
+      <div class="numgrid" role="group" aria-label="Posição e tamanho">
+        <label><span>X</span><input id="n-x" type="number" step="1" inputmode="numeric"></label>
+        <label><span>Y</span><input id="n-y" type="number" step="1" inputmode="numeric"></label>
+        <label><span>Larg.</span><input id="n-w" type="number" step="1" min="4" inputmode="numeric"></label>
+        <label><span>Alt.</span><input id="n-h" type="number" step="1" min="4" inputmode="numeric"></label>
+        <label><span>Ângulo</span><input id="n-a" type="number" step="1" inputmode="numeric"></label>
+      </div>
+      <p class="hint" id="n-info">Valores em pixels da tela de saída.</p>
+      <label class="field" for="aspect">
+        <span>Proporção da superfície</span>
+        <select id="aspect">
+          <option value="">Personalizada</option>
+          <option value="16:9">16:9 (horizontal)</option>
+          <option value="9:16">9:16 (vertical)</option>
+          <option value="1:1">1:1 (quadrada)</option>
+          <option value="4:3">4:3</option>
+          <option value="3:4">3:4</option>
+          <option value="21:9">21:9 (ultra largo)</option>
+        </select>
+      </label>
+      <div class="row">
+        <button id="btn-lock" class="btn small" type="button" aria-pressed="false">Travar</button>
+        <button id="btn-solo" class="btn small" type="button" aria-pressed="false">Solo</button>
+        <button id="btn-dup" class="btn small" type="button">Duplicar</button>
+      </div>
+      <div class="seg" role="group" aria-label="Modo de edição">
+        <button id="m-corners" type="button" class="on" aria-pressed="true" title="Cantos (C)">Cantos</button>
+        <button id="m-xform" type="button" aria-pressed="false" title="Transformar (V)">Transformar</button>
+        <button id="m-mask" type="button" aria-pressed="false" title="Máscara (M)">Máscara</button>
+        <button id="m-mesh" type="button" aria-pressed="false" title="Malha (N)">Malha</button>
+        <button id="m-clip" type="button" aria-pressed="false" title="Conteúdo do clipe da timeline (Transform e Distort)" hidden>Conteúdo</button>
+      </div>
+      <div class="row">
+        <select id="mesh-n" class="pick" aria-label="Pontos da malha">
+          <option value="2">Malha 2 x 2</option>
+          <option value="3">Malha 3 x 3</option>
+          <option value="4" selected>Malha 4 x 4</option>
+          <option value="6">Malha 6 x 6</option>
+          <option value="8">Malha 8 x 8</option>
+        </select>
+        <button id="mesh-reset" class="btn small" type="button">Redefinir malha</button>
+        <button id="mesh-off" class="btn small" type="button">Desligar malha</button>
+      </div>
+      <div class="row">
+        <button id="reset-corners" class="btn small" type="button">Redefinir cantos</button>
+        <button id="btn-snap" class="btn small on" type="button" aria-pressed="true">Ímã nos cantos</button>
+        <button id="reset-mask" class="btn small" type="button">Redefinir máscara</button>
+      </div>
+      <label class="field" for="shape-pick">
+        <span>Forma pronta (recorta a superfície)</span>
+        <select id="shape-pick">
+          <option value="">Escolher forma...</option>
+          <option value="rect">Retângulo</option>
+          <option value="circle">Círculo</option>
+          <option value="triangle">Triângulo</option>
+          <option value="diamond">Losango</option>
+          <option value="pentagon">Pentágono</option>
+          <option value="hexagon">Hexágono</option>
+          <option value="star">Estrela</option>
+          <option value="heart">Coração</option>
+          <option value="arrow">Seta</option>
+          <option value="cross">Cruz</option>
+        </select>
+      </label>
+      <p id="mode-hint" class="hint"></p>
+
+      <div class="sub">
+        <div class="field" role="group" aria-label="Looks prontos"><span>Looks prontos</span><div id="looks" class="looks"></div></div>
+        <label class="field" for="opacity">
+          <span>Opacidade <output id="o-val">100%</output></span>
+          <input id="opacity" type="range" min="0" max="100" value="100">
+        </label>
+        <label class="field" for="bright">
+          <span>Brilho <output id="b-val">100%</output></span>
+          <input id="bright" type="range" min="0" max="200" value="100">
+        </label>
+        <label class="field" for="contrast">
+          <span>Contraste <output id="c-val">100%</output></span>
+          <input id="contrast" type="range" min="0" max="200" value="100">
+        </label>
+        <label class="field" for="radius">
+          <span>Cantos arredondados <output id="radius-val">0%</output></span>
+          <input id="radius" type="range" min="0" max="50" value="0">
+        </label>
+        <label class="field" for="feather">
+          <span>Borda suave <output id="feather-val">0%</output></span>
+          <input id="feather" type="range" min="0" max="50" value="0">
+        </label>
+        <label class="field" for="motion">
+          <span>Movimento</span>
+          <select id="motion">
+            <option value="none">Parado</option>
+            <option value="flutuar">Flutuar</option>
+            <option value="pulsar">Pulsar</option>
+            <option value="balancar">Balançar</option>
+            <option value="girar">Girar</option>
+            <option value="tremer">Tremer</option>
+            <option value="orbita">Órbita</option>
+            <option value="batida">Pular na batida (microfone)</option>
+          </select>
+        </label>
+        <label class="field" for="motion-amt">
+          <span>Força do movimento <output id="motion-amt-val">50%</output></span>
+          <input id="motion-amt" type="range" min="0" max="100" value="50">
+        </label>
+        <label class="field" for="sat">
+          <span>Saturação <output id="sat-val">100%</output></span>
+          <input id="sat" type="range" min="0" max="300" value="100">
+        </label>
+        <label class="field" for="hue">
+          <span>Matiz <output id="hue-val">0°</output></span>
+          <input id="hue" type="range" min="0" max="360" value="0">
+        </label>
+        <label class="field" for="cycle">
+          <span>Ciclo de cores <output id="cycle-val">parado</output></span>
+          <input id="cycle" type="range" min="0" max="180" value="0">
+        </label>
+        <label class="field" for="blur">
+          <span>Desfoque <output id="blur-val">0 px</output></span>
+          <input id="blur" type="range" min="0" max="40" value="0">
+        </label>
+        <div class="row">
+          <button id="btn-invert" class="btn small" type="button" aria-pressed="false">Inverter cores</button>
+          <button id="btn-mono" class="btn small" type="button" aria-pressed="false">Preto e branco</button>
+        </div>
+        <label class="field" for="audio-amt">
+          <span>Reação ao som <output id="audio-val">0%</output></span>
+          <input id="audio-amt" type="range" min="0" max="100" value="0">
+        </label>
+        <label class="field" for="audio-to">
+          <span>O som mexe em</span>
+          <select id="audio-to">
+            <option value="bright">Brilho</option>
+            <option value="opacity">Opacidade</option>
+          </select>
+        </label>
+        <label class="field" for="rot-jog">
+          <span>Girar camada (manual) <output id="rot-val">0°</output></span>
+          <input id="rot-jog" type="range" min="-45" max="45" step="0.5" value="0">
+        </label>
+        <div class="row">
+          <button id="btn-rot-m1" class="btn small" type="button">↺ 1°</button>
+          <button id="btn-rot-p1" class="btn small" type="button">↻ 1°</button>
+        </div>
+        <div class="row">
+          <button id="btn-flipx" class="btn small" type="button" aria-pressed="false">Espelhar horizontal</button>
+          <button id="btn-flipy" class="btn small" type="button" aria-pressed="false">Espelhar vertical</button>
+          <button id="btn-rot90" class="btn small" type="button">Girar mídia 90° (0°)</button>
+          <button id="btn-rotl" class="btn small" type="button" title="Shift = 90°">Girar camada ↺ 15°</button>
+          <button id="btn-rotr" class="btn small" type="button" title="Shift = 90°">Girar camada ↻ 15°</button>
+          <button id="btn-blend" class="btn small" type="button" aria-pressed="false">Mistura screen</button>
+          <button id="btn-scover" class="btn small" type="button" aria-pressed="false" title="Pinta de preto a área desta superfície, escondendo o que está abaixo">Cobrir superfícies abaixo</button>
+        </div>
+      </div>
+
+
+    </section>
+
+    <section class="sec" data-tab="saida" aria-labelledby="h-view">
+      <h2 id="h-view">Exibição</h2>
+      <div class="row">
+        <button id="t-guides" class="btn on" type="button" aria-pressed="true">Guias</button>
+        <button id="t-play" class="btn" type="button">Pausar vídeos</button>
+      </div>
+      <p class="hint">Atalhos: G guias, B blackout, T toque o tempo, 1 a 9 cenas, Cmd+Z desfaz, Shift+Cmd+Z refaz. As setas movem a layer 1 px, com Shift 10 px.</p>
+    </section>
+    <section class="sec" data-tab="saida" aria-labelledby="h-midi">
+      <h2 id="h-midi">Controle MIDI</h2>
+      <div class="row">
+        <button id="midi-on" class="btn" type="button" aria-pressed="false">Ligar MIDI</button>
+        <output id="midi-info" class="hint">Desligado</output>
+      </div>
+      <div id="midi-map" class="row"></div>
+      <p class="hint">Padrão: notas C2 em diante trocam de cena (C2 = cena 1), knob CC 7 ou 1 controla o brilho geral. Para trocar, clique num botão, depois aperte a tecla ou gire o knob. Funciona com qualquer controlador USB.</p>
+    </section>
+    <section class="sec" data-tab="live" aria-labelledby="h-live">
+      <h2 id="h-live">Ao vivo</h2>
+      <p class="hint">As guias ficam escondidas. Toque numa cena para trocar com fade.</p>
+      <div id="live-scenes" class="live-grid"></div>
+      <div class="live-row">
+        <button id="live-prev" class="btn live-big" type="button">◀ Anterior</button>
+        <button id="live-next" class="btn live-big" type="button">Próxima ▶</button>
+      </div>
+      <button id="live-black" class="btn live-big" type="button" aria-pressed="false">Blackout</button>
+      <button id="live-out" class="btn live-big primary" type="button">Enviar pra tela</button>
+      <div class="live-row">
+        <button id="live-flash" class="btn live-big" type="button" title="Segure para piscar branco">Flash (segure)</button>
+        <select id="live-strobe" aria-label="Strobe"><option value="0">Strobe desligado</option><option value="2">Strobe 2 Hz</option><option value="4">Strobe 4 Hz</option><option value="8">Strobe 8 Hz</option></select>
+      </div>
+      <p class="hint">Aviso: luz piscando pode causar mal-estar em pessoas sensíveis. Avise o público antes de usar o strobe.</p>
+      <label class="field" for="live-master"><span>Brilho da saída <output id="live-master-val">100%</output></span>
+        <input id="live-master" type="range" min="0" max="100" value="100"></label>
+    </section>
+  </aside>
+</div>
+<div id="pal" class="modal" hidden role="dialog" aria-modal="true" aria-label="Buscar comandos">
+  <div class="modal-card pal-card">
+    <input id="pal-q" type="text" placeholder="Digite o que você quer fazer: efeito, cena, modo..." autocomplete="off" aria-label="Buscar">
+    <ul id="pal-list" role="listbox"></ul>
+    <p class="hint">Setas para escolher, Enter para executar, Esc para fechar.</p>
+  </div>
+</div>
+<div id="help" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="help-t">
+  <div class="modal-card">
+    <h2 id="help-t">Atalhos</h2>
+    <ul class="keys">
+      <li><kbd>C</kbd> Cantos</li><li><kbd>V</kbd> Transformar</li><li><kbd>M</kbd> Máscara</li><li><kbd>N</kbd> Malha</li>
+      <li><kbd>G</kbd> Mostrar ou esconder guias</li><li><kbd>B</kbd> Blackout</li><li><kbd>1</kbd> a <kbd>9</kbd> Trocar de cena</li>
+      <li><kbd>Cmd</kbd>+<kbd>K</kbd> Buscar qualquer ação ou efeito</li><li><kbd>T</kbd> Toque o tempo</li><li><kbd>L</kbd> Travar ou destravar</li><li><kbd>Delete</kbd> Apagar superfície</li><li><kbd>Cmd</kbd>+<kbd>D</kbd> Duplicar</li>
+      <li><kbd>Cmd</kbd>+<kbd>Z</kbd> Desfazer, <kbd>Shift</kbd> refaz</li><li><kbd>Setas</kbd> Mover 1 px, com Shift 10 px</li>
+      <li>Botão direito Menu da superfície</li><li>Alt ao arrastar Solta o ímã ou escala do centro</li>
+    </ul>
+    <div class="row"><button id="help-tour" class="btn" type="button">Ver o passo a passo</button><button id="help-close" class="btn primary" type="button">Fechar</button></div>
+  </div>
+</div>
+<div id="tour" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="tour-t">
+  <div class="modal-card">
+    <p id="tour-n" class="tag"></p>
+    <h2 id="tour-t"></h2>
+    <p id="tour-p" class="tour-p"></p>
+    <div class="row"><button id="tour-skip" class="btn small" type="button">Pular</button><button id="tour-back" class="btn" type="button">Voltar</button><button id="tour-next" class="btn primary" type="button">Próximo</button></div>
+  </div>
+</div>
+<div id="ctx" class="ctxmenu" hidden role="menu"></div>
+<script src="textures.js"></script>
+<script src="textures-extra.js"></script>
+<script src="textures-extra2.js"></script>
+<script src="ai/ai-effects.js"></script>
+<script src="silhouette.js"></script>
+<script src="illusion-core.js"></script>
+<script src="illusion-gl.js"></script>
+<script src="viewer-core.js"></script>
+<script src="effects-core.js"></script>
+<script src="effects-dom.js"></script>
+<script src="sequence.js"></script>
+<script src="renderer.js"></script>
+<script src="sequence-player.js"></script>
+<script src="ai/ai-schema.js"></script>
+<script src="ai/shader-validator.js"></script>
+<script src="ai/glsl-fx.js"></script>
+<script src="ai/animation-planner.js"></script>
+<script src="ai/image-tools.js"></script>
+<script src="ai/creative-suggestions.js"></script>
+<script src="ai/vision-analysis.js"></script>
+<script src="ai/audio-analysis.js"></script>
+<script src="ai/ai-provider.js"></script>
+<script src="ai/ai-timeline-bridge.js"></script>
+<script src="ai/ai-illusion.js"></script>
+<script src="ai/ai-director.js"></script>
+<script src="ai/ai-director-panel.js"></script>
+<script src="media-core.js"></script>
+<script src="media-browser.js"></script>
+<script src="tl-menu.js"></script>
+<script src="timeline-edit-core.js"></script>
+<script src="keyframe-core.js"></script>
+<script src="keyframe-ui.js"></script>
+<script src="illusion-timeline.js"></script>
+<script src="illusion-ui.js"></script>
+<script src="hierarchy-core.js"></script>
+<script src="hierarchy-ui.js"></script>
+<script src="compound-core.js"></script>
+<script src="timeline-ui.js"></script>
+<script src="layout-core.js"></script>
+<script src="control.js"></script>
+<script src="layout-ui.js"></script>
+<script src="updater-ui.js"></script>
+</body>
+</html>

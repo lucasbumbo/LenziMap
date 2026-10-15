@@ -1,0 +1,13 @@
+const {open}=require('./h.js');
+(async()=>{const h=await open(8871);const p=h.p;
+ for(let i=0;i<2;i++)await p.click('#btn-newbox');
+ await p.click('[data-go="timeline"]');await p.click('#tl-insp button.primary');await p.waitForTimeout(400);
+ await p.click('.tl-bar button:has-text("Faixa p/ cada face")');await p.waitForTimeout(300);
+ await p.locator('.tl-head').nth(0).locator('button[aria-label="Adicionar camada"]').click();
+ await p.locator('.tl-head').nth(0).locator('button[aria-label="Adicionar camada"]').click();
+ await p.locator('.tl-head').nth(3).locator('button[aria-label="Adicionar camada"]').click();
+ await p.evaluate(()=>{const H=window.TimelineUI._h,S=H.Seq,seq=H.tl.seq;
+  const a=S.addAsset(seq,{kind:'fx',name:'Grade',fx:{kind:'grade',color:'#ff4fa3',speed:1,scale:1}});
+  const b=S.addAsset(seq,{kind:'video',name:'v6',path:'/media/v6.webm',duration:6});b.src=H.toUrl(b.path);
+  seq.tracks.forEach((t,i)=>{if(t.type==='video')S.addClip(seq,t.id,i%2?b:a,i,4);});seq.duration=12;H.syncClock();H.push();H.renderAll();window.TimelineUI.api.seek(3);});
+ await p.waitForTimeout(1500);await p.screenshot({path:'/home/claude/mapeador-livre-mac/shots/camadas.png'});await h.close();})();

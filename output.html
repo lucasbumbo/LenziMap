@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' file: data: blob:; media-src 'self' file: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'">
+<title>Saída</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; cursor: none; }
+  #stage { position: fixed; inset: 0; background: #000; overflow: hidden; }
+  .xs { position: absolute; left: 0; top: 0; display: block; max-width: none; max-height: none; pointer-events: none; }
+  .surf { position: absolute; left: 0; top: 0; display: block; transform-origin: 0 0; max-width: none; max-height: none; pointer-events: none; user-select: none; }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<script src="textures.js"></script>
+<script src="textures-extra.js"></script>
+<script src="textures-extra2.js"></script>
+<script src="ai/ai-effects.js"></script>
+<script src="ai/shader-validator.js"></script>
+<script src="ai/glsl-fx.js"></script>
+<script src="illusion-core.js"></script>
+<script src="illusion-gl.js"></script>
+<script src="viewer-core.js"></script>
+<script src="effects-core.js"></script>
+<script src="effects-dom.js"></script>
+<script src="sequence.js"></script>
+<script src="renderer.js"></script>
+<script src="sequence-player.js"></script>
+<script src="output.js"></script>
+</body>
+</html>

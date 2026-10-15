@@ -1,0 +1,105 @@
+{
+  "name": "lenzimap",
+  "productName": "LenziMap",
+  "version": "1.0.0",
+  "description": "LenziMap: projection mapping com GIF, vídeo, foto, texto e efeitos, com saída direta para um monitor ou projetor.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --mac --publish never",
+    "release": "electron-builder --mac --publish always",
+    "test": "bash tests/run-all.sh"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "license": "MIT",
+  "build": {
+    "appId": "com.llfilms.lenzimap",
+    "productName": "LenziMap",
+    "files": [
+      "main.js",
+      "preload.js",
+      "control.html",
+      "control.js",
+      "output.html",
+      "output.js",
+      "renderer.js",
+      "sequence.js",
+      "sequence-player.js",
+      "tl-menu.js",
+      "timeline-edit-core.js",
+      "keyframe-core.js",
+      "compound-core.js",
+      "illusion-core.js",
+      "viewer-core.js",
+      "effects-core.js",
+      "effects-dom.js",
+      "illusion-gl.js",
+      "illusion-timeline.js",
+      "illusion-ui.js",
+      "hierarchy-core.js",
+      "hierarchy-ui.js",
+      "keyframe-ui.js",
+      "media-core.js",
+      "media-browser.js",
+      "timeline-ui.js",
+      "layout-core.js",
+      "layout-ui.js",
+      "textures.js",
+      "textures-extra.js",
+      "textures-extra2.js",
+      "silhouette.js",
+      "updater.js",
+      "updater-core.js",
+      "updater-ui.js",
+      "migrate-data.js",
+      "ai/*.js",
+      "biblioteca/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.graphics-design",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "universal"
+          ]
+        }
+      ],
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "O LenziMap usa o microfone para as camadas reagirem ao som.",
+        "NSCameraUsageDescription": "O LenziMap usa a câmera quando você adiciona Câmera ao vivo."
+      },
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist"
+    },
+    "dmg": {
+      "title": "LenziMap"
+    },
+    "asarUnpack": [
+      "biblioteca/**/*"
+    ],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "lucasbumbo",
+        "repo": "LenziMap",
+        "releaseType": "draft"
+      }
+    ]
+  },
+  "author": "LL Films",
+  "dependencies": {
+    "electron-updater": "^6.8.9"
+  }
+}
