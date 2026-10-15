@@ -12,6 +12,7 @@
   var CSS = '.il-wrap{display:flex;flex-direction:column;gap:10px}.il-wrap h2{margin:0}.il-box{border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:8px;display:flex;flex-direction:column;gap:8px}' +
     '.il-box>summary{cursor:pointer;font-weight:600;font-size:13px}.il-cards{display:grid;grid-template-columns:1fr 1fr;gap:6px}.il-card{font:inherit;text-align:left;border:1px solid var(--line);background:var(--panel-2);color:var(--fg);border-radius:8px;padding:8px;cursor:pointer;display:flex;flex-direction:column;gap:2px}' +
     '.il-card b{font-size:13px}.il-card span{font-size:11px;color:var(--muted)}.il-card.on{border-color:var(--accent)}.il-card.first{grid-column:1/3}' +
+    '.il-kid .il-row button{font-size:15px;padding:10px 14px;min-height:44px}.il-kid .il-big button{font-size:18px;padding:14px 20px;min-height:54px;width:100%}.il-kid .il-note{font-size:13px}' +
     '.il-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.il-row label{display:flex;gap:4px;align-items:center;font-size:12px}.il-grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}' +
     '.il-grid3 input,.il-box input[type=number],.il-box input[type=text],.il-box select{font:inherit;color:var(--fg);background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:5px 6px;width:100%;min-width:0}' +
     '.il-sl{display:grid;grid-template-columns:1fr 64px auto;gap:6px;align-items:center;font-size:12px}.il-sl>span{grid-column:1/4;color:var(--muted)}.il-sl input[type=range]{width:100%}' +
@@ -135,6 +136,8 @@
     var ent = { il: S.il, assetId: S.assetId }, k0 = S.il.target.cube + ':';
     if (isJoined()) { var J = C.JOINS[S.il.room.join]; S.faceIl[k0 + J.a] = ent; S.faceIl[k0 + J.b] = ent; } else S.faceIl[faceKey(S.il)] = ent;
   }
+  // cria uma superfície nova clicando no botão "+ Nova superfície" do app (pra criança não precisar procurar)
+  function makeSurface() { var nb = document.getElementById('btn-newbox'); if (!nb) return false; nb.click(); return true; }
   function freeSurfaceKey() {
     var used = {}; stage().cubes.forEach(function (c) { C.FACES.forEach(function (g) { if (c.faces[g]) used[c.faces[g]] = 1; }); });
     var free = H.surfaces().map(function (z) { return z.s.key; }).filter(function (kk) { return kk && !used[kk]; });
@@ -169,7 +172,14 @@
       var used = {}; st.cubes.forEach(function (c) { C.FACES.forEach(function (g) { if (c.faces[g]) used[c.faces[g]] = 1; }); });
       var free = H.surfaces().map(function (z) { return z.s.key; }).filter(function (kk) { return kk && !used[kk]; });
       if (free.length) { S.msg = 'Liguei a ' + surfName(free[0]) + ' na face ' + C.FACE_LABEL[f] + '.'; bindSurface(cube.id, f, free[0]); return; }
-      S.msg = 'Não tem tela livre. Crie uma superfície nova (botão de nova caixa) e escolha de novo.';
+      if (!S.adv && makeSurface()) {
+        S.msg = 'Criando uma superfície nova para a face ' + C.FACE_LABEL[f] + '...';
+        setTimeout(function () {
+          var k2 = freeSurfaceKey();
+          if (k2 && S.curFace === f) { bindSurface(cube.id, f, k2); S.msg = 'Criei uma superfície nova para a face ' + C.FACE_LABEL[f] + '. Arraste os 4 cantos dela até a face do cubo.'; render(); }
+          else render();
+        }, 350);
+      } else S.msg = 'Não tem tela livre. Crie uma superfície nova (botão de nova caixa) e escolha de novo.';
     } else S.msg = 'Face ' + C.FACE_LABEL[f] + ' escolhida.' + (S.assetId ? ' Já está na timeline: o que você mudar vale na hora.' : '');
     render();
   }
@@ -197,7 +207,7 @@
     b.appendChild(selectRow('Cubo', st.cubes.map(function (c) { return [c.id, c.name + ' (' + c.size + ' pol)']; }), function () { return S.il.target.cube; }, function (v) { selectFace(v, S.il.target.faces[0] || 'front'); }, 'il-cube'));
     var cube = C.cubeById(st, S.il.target.cube) || st.cubes[0], cur = S.il.target.faces[0] || 'front', row = el('div', 'il-row'); row.style.flexWrap = 'wrap';
     C.FACES.forEach(function (f) {
-      var k = cube.faces[f], x = btn(C.FACE_LABEL[f] + (k ? '' : ' (sem tela)'), function () {
+      var k = cube.faces[f], x = btn(C.FACE_LABEL[f], function () {
         selectFace(cube.id, f);
       }, S.il.target.faces.indexOf(f) >= 0 ? 'on' : '', 'il-pick-' + f);
       x.setAttribute('aria-pressed', S.il.target.faces.indexOf(f) >= 0 ? 'true' : 'false'); row.appendChild(x);
@@ -212,12 +222,12 @@
     S.rcv = null;
     // passo 2: tipo de sala (botões grandes)
     b.appendChild(el('p', 'il-note', '2. Escolha o tipo de sala'));
-    var defs = { corredor: ['Corredor', { back: 1, left: 1, right: 1, floor: 1, ceiling: 1 }, 90], quarto: ['Quarto', { back: 1, left: 1, right: 1, floor: 1, ceiling: 1 }, 40], caixa: ['Caixa funda', { back: 1 }, 70], chao: ['Chão e fundo', { back: 1, floor: 1 }, 70] };
+    var defs = { corredor: ['🚪 Corredor', { back: 1, left: 1, right: 1, floor: 1, ceiling: 1 }, 90], quarto: ['🛏️ Quarto', { back: 1, left: 1, right: 1, floor: 1, ceiling: 1 }, 40], caixa: ['📦 Caixa funda', { back: 1 }, 70], chao: ['⬛ Chão e fundo', { back: 1, floor: 1 }, 70] };
     var rowS = el('div', 'il-row'); rowS.style.flexWrap = 'wrap';
     Object.keys(defs).forEach(function (k) {
       var d = defs[k];
       rowS.appendChild(btn(d[0], function () {
-        S.sala = k; S.msg = 'Sala "' + d[0] + '" escolhida. Quando gostar da prévia, clique em Colocar na face.';
+        S.sala = k; S.msg = 'Sala escolhida: ' + d[0] + '. Quando gostar da prévia, clique em Colocar na face.';
         C.ROOM_WALLS.forEach(function (w2) { S.il.room.walls[w2].on = !!d[1][w2]; });
         S.il.params.depth = Math.max(C.PARAMS.depth.min, Math.min(C.PARAMS.depth.max, d[2]));
         changed('il-room', true);
@@ -239,7 +249,7 @@
     var cores = el('details', 'il-box'); cores.id = 'il-cores'; cores.open = !!S.open.cores; cores.addEventListener('toggle', function () { S.open.cores = cores.open; });
     cores.appendChild(el('summary', null, '4. Cores e imagens (opcional)'));
     var fino = el('details', 'il-box'); fino.id = 'il-fino'; fino.open = !!S.open.fino; fino.addEventListener('toggle', function () { S.open.fino = fino.open; });
-    fino.appendChild(el('summary', null, 'Ajuste fino (só se precisar)'));
+    fino.appendChild(el('summary', null, 'Mais opções (só se precisar)'));
     var dl = el('label', null, 'Duração (s) '), dn = el('input'); dn.type = 'number'; dn.min = 1; dn.max = 600; dn.step = 1; dn.value = S.dur; dn.id = 'il-dur'; dn.style.width = '64px'; dn.addEventListener('change', function () { S.dur = Math.max(1, Math.min(600, +dn.value || 8)); });
     dn.addEventListener('keydown', function (e) { e.stopPropagation(); });
     dl.appendChild(dn); fino.appendChild(dl);
@@ -664,11 +674,12 @@
     if (!S.adv && S.il.preset === 'room-builder') {
       var st0 = stage(), cu0 = C.cubeById(st0, S.il.target.cube), miss0 = [];
       S.il.target.faces.forEach(function (g) { if (cu0 && !cu0.faces[g]) { var kk = freeSurfaceKey(); if (kk) bindSurface(cu0.id, g, kk); else miss0.push(C.FACE_LABEL[g]); } });
+      if (miss0.length && !S.retry && makeSurface()) { S.retry = true; setTimeout(function () { S.retry = false; applyNow(); }, 350); return; }
       if (miss0.length) { S.msg = 'Falta uma superfície para a face ' + miss0.join(', ') + '. Clique em + Nova superfície (no topo), arraste os 4 cantos até a face do cubo e clique em Colocar na face de novo.'; render(); return; }
     }
     if (S.quick && T.QUICK[S.il.preset]) keys = T.QUICK[S.il.preset][0].keys(S.dur);
     var b = T.apply(S.il, hostObj(), { duration: S.dur, keys: keys });
-    if (b.ok) { S.assetId = b.assetId; S.il = clone(T.illusionOf(seq(), b.assetId) || S.il); S.msg = 'Aplicado: ' + b.clipIds.length + ' clipe(s) na timeline, começando em ' + b.at.toFixed(2) + ' s.' + (b.warnings.length ? ' Avisos: ' + b.warnings.join(' ') : ''); }
+    if (b.ok) { S.assetId = b.assetId; S.il = clone(T.illusionOf(seq(), b.assetId) || S.il); S.msg = (!S.adv && S.il.preset === 'room-builder' ? 'Pronto! A sala está na face ' + S.il.target.faces.map(function (g) { return C.FACE_LABEL[g]; }).join(' e ') + '. Aperte o play da timeline para ver.' : 'Aplicado: ' + b.clipIds.length + ' clipe(s) na timeline, começando em ' + b.at.toFixed(2) + ' s.') + (b.warnings.length ? ' Avisos: ' + b.warnings.join(' ') : ''); }
     else S.msg = (b.errors && b.errors[0]) || b.warnings.join(' ') || 'Não consegui aplicar.';
     render();
   }
@@ -677,7 +688,7 @@
     if (!sec || !S.il) return;
     var keep = sec.querySelector('details[open]') ? null : null, scroll = sec.parentNode ? sec.parentNode.scrollTop : 0;
     sec.textContent = ''; S.lastStatus = 0;
-    var w = el('div', 'il-wrap');
+    var w = el('div', 'il-wrap' + (!S.adv ? ' il-kid' : ''));
     var head = el('div', 'il-row'); head.appendChild(el('h2', null, '3D Illusion Creator')); w.appendChild(head);
     var cv = el('canvas', 'il-cv'); cv.id = 'il-canvas'; cv.width = 560; cv.height = 350; cv.setAttribute('role', 'img'); cv.setAttribute('aria-label', 'Prévia da ilusão 3D'); S.cv = cv; w.appendChild(cv);
     if (!S.adv) {
@@ -699,14 +710,15 @@
     w.appendChild(ar);
     }
     var ar2 = el('div', 'il-row');
-    ar2.appendChild(btn(S.assetId ? 'Aplicar de novo (nova camada)' : (easy ? 'Colocar na face' : 'Aplicar na Timeline'), applyNow, 'primary', 'il-apply'));
+    if (!(easy && S.assetId)) ar2.appendChild(btn(S.assetId ? 'Aplicar de novo (nova camada)' : (easy ? 'Colocar na face' : 'Aplicar na Timeline'), applyNow, 'primary', 'il-apply'));
+    else ar2.appendChild(el('p', 'il-note il-ok', 'Já está na face. Mude a sala, a profundidade ou as cores e vale na hora.'));
     if (S.assetId) ar2.appendChild(btn(easy ? 'Tirar da face' : 'Desfazer aplicação', function () { var asset = S.assetId; H.checkpoint('il-remove'); T.removeAll(seq(), asset); S.assetId = null; H.syncClock(); H.renderAll(); S.msg = 'Ilusão removida da timeline. Ela voltou a ser rascunho.'; render(); }, null, 'il-remove'));
     if (!easy) w.appendChild(ar2);
     (easy ? [secEasy, secEasy3d] : [secIllusion, secTarget].concat(S.il.preset === 'room-builder' ? [secRoom] : [], [secGeometry, secParams, secCamera, secLight, secMaterial, secAnim, secQuality, secPresets])).forEach(function (f) { w.appendChild(f()); });
     if (easy) { ar2.className = 'il-row il-big'; w.appendChild(ar2); }
     var al = el('label', 'il-note'), ac = el('input'); ac.type = 'checkbox'; ac.id = 'il-adv'; ac.checked = S.adv;
     ac.addEventListener('change', function () { S.adv = ac.checked; try { localStorage.setItem('lenzi-il-adv', S.adv ? '1' : '0'); } catch (e) {} render(); });
-    al.appendChild(ac); al.appendChild(document.createTextNode(' Mostrar opções avançadas (tipos de ilusão, câmera, luz, geometria do palco)')); w.appendChild(al);
+    al.appendChild(ac); al.appendChild(document.createTextNode(' Opções avançadas (para quem entende do assunto)')); w.appendChild(al);
     if (!S.adv && S.il.preset !== 'room-builder') { var back = el('div', 'il-row'); back.appendChild(el('span', 'il-note', 'Esta ilusão não é a Sala de paredes.')); back.appendChild(btn('Voltar para a Sala de paredes', function () { newIllusion('room-builder'); render(); }, null, 'il-back-room')); w.insertBefore(back, w.firstChild.nextSibling); }
     sec.appendChild(w);
     if (sec.parentNode) sec.parentNode.scrollTop = scroll;

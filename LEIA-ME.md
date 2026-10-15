@@ -191,6 +191,12 @@ Na aba **3D** agora abre direto o modo fácil:
 3. **Paredes e objetos**: marque Fundo, Parede esquerda, Parede direita, Chão e Teto, escolha cor e imagem ou GIF de cada uma, e adicione objetos (um bichinho em GIF, por exemplo).
 Depois, **Aplicar na Timeline**. Os tipos de ilusão, câmera, luz e geometria do palco ficam em **Mostrar opções avançadas** (no fim do painel). A escolha fica guardada.
 
+## 1.0.11 - painel 3D para qualquer pessoa
+- Botões maiores, salas com ícone e textos sem palavras difíceis.
+- Se a face não tem superfície, o app cria uma sozinho. Antes era preciso criar na mão.
+- Depois de colocada, a sala vale na hora e o botão de aplicar some, para não duplicar o clipe.
+- Mensagem clara de sucesso: "Pronto! A sala está na face ...".
+
 ## 1.0.10 - Colocar na face liga a tela sozinho
 - Se a face escolhida ainda não tem superfície, o botão **Colocar na face** liga uma livre automaticamente. Antes dava erro.
 - A sala escolhida fica destacada e o painel diz o próximo passo.
