@@ -183,3 +183,10 @@ A face de cima é vista de raspão pelo público e o interior quase não apareci
 - Uma superfície agora só fica ligada a uma face. Se você escolher uma superfície que já estava em outra face, ela sai da outra (antes as duas desenhavam no mesmo lugar e a ilusão aparecia errada).
 - O painel 3D avisa quando a mesma superfície está em duas faces (projetos antigos) e quando uma face marcada não pode ser vista do ponto de vista do público (fica vazia). Nesse caso, mude o Olho X, Y ou Z do público ou gire o cubo.
 - A lista de superfícies nas faces atualiza sozinha quando você cria ou apaga superfícies com o painel já aberto.
+
+## 1.0.3: paredes em 3 passos (modo fácil)
+Na aba **3D** agora abre direto o modo fácil:
+1. **Escolha a face do cubo**: clique em Frente, Direita, Trás, Esquerda ou Topo. Se a face não tem tela, o app liga uma superfície livre sozinho. Dá para trocar a tela no seletor logo abaixo.
+2. **Empurre o fundo**: o controle Distância do fundo (ou arraste o fundo na vista de cima).
+3. **Paredes e objetos**: marque Fundo, Parede esquerda, Parede direita, Chão e Teto, escolha cor e imagem ou GIF de cada uma, e adicione objetos (um bichinho em GIF, por exemplo).
+Depois, **Aplicar na Timeline**. Os tipos de ilusão, câmera, luz e geometria do palco ficam em **Mostrar opções avançadas** (no fim do painel). A escolha fica guardada.

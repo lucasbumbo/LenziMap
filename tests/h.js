@@ -18,6 +18,7 @@ async function open(port,opts={}){
    sendState:(s)=>{window.__sent.state++;window.__lastState=s;},sendTransport:(t)=>{window.__sent.tr.push(t);},sendLevel:()=>{},setShowMode:(on)=>{window.__showMode=on;},libraryApp:()=>Promise.resolve([]),libraryFolder:()=>Promise.resolve([]),
    toUrl:x=>x.startsWith('/')?('http://localhost:'+port+x):x,pathFor:()=>'',askMedia:()=>Promise.resolve(true),saveProject:(j)=>{window.__saved=j;return Promise.resolve('/x.mapa')},openProject:()=>Promise.resolve(window.__openJson||null),openMedia:()=>Promise.resolve([]),saveRecording:()=>Promise.resolve()};
  },port);
+if(!opts.easy)await p.addInitScript(()=>{try{localStorage.setItem('lenzi-il-adv','1')}catch(e){}});
  await p.goto('http://localhost:'+port+'/control.html');await p.waitForTimeout(900);
  return {p,b,srv,errs,close:async()=>{await b.close();srv.close();}};
 }

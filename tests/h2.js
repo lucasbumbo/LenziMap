@@ -20,6 +20,7 @@ async function openPair(port,opts={}){
   window.__fromCtl=(k,j)=>{const v=JSON.parse(j);if(k==='state'&&window.__cb.state)window.__cb.state(v);if(k==='transport'&&window.__cb.tr)window.__cb.tr(v);};});
  await o.setViewportSize({width:1440,height:810});
  await o.goto('http://localhost:'+port+'/output.html');await o.waitForTimeout(300);outReady=true;
+if(!opts.easy)await p.addInitScript(()=>{try{localStorage.setItem('lenzi-il-adv','1')}catch(e){}});
  await p.goto('http://localhost:'+port+'/control.html');await p.waitForTimeout(900);
  await p.evaluate(()=>{window.__resend&&window.__resend();});
  return {p,o,b,srv,errs,oerrs,close:async()=>{await b.close();srv.close();}};
