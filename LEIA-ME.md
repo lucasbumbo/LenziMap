@@ -190,3 +190,6 @@ Na aba **3D** agora abre direto o modo fácil:
 2. **Empurre o fundo**: o controle Distância do fundo (ou arraste o fundo na vista de cima).
 3. **Paredes e objetos**: marque Fundo, Parede esquerda, Parede direita, Chão e Teto, escolha cor e imagem ou GIF de cada uma, e adicione objetos (um bichinho em GIF, por exemplo).
 Depois, **Aplicar na Timeline**. Os tipos de ilusão, câmera, luz e geometria do palco ficam em **Mostrar opções avançadas** (no fim do painel). A escolha fica guardada.
+
+## 1.0.4: cubo 3D clicável
+No modo fácil da aba **3D**, a prévia é um cubo 3D de verdade: **arraste para girar**, **role para aproximar**, **clique numa face** para escolher (ela fica rosa e mostra o nome da tela ligada, ou "sem tela"). Passar o mouse numa face mostra o contorno branco. Os botões De frente, De canto e De cima mudam o ângulo de uma vez. Clicar numa face sem tela liga uma superfície livre sozinho.

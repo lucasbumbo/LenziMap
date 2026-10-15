@@ -127,20 +127,43 @@
     if (hid.length) b.appendChild(el('p', 'il-warn', 'Do ponto de vista do público não dá para ver a face: ' + hid.join(', ') + '. Ela fica vazia. Mude o Olho X, Y ou Z do público (opções avançadas, Câmera) ou gire o cubo.'));
   }
   // ---------- modo fácil: 1) escolher a face  2) empurrar o fundo  3) paredes ----------
+  function selectFace(cubeId, f) {
+    var st = stage(), cube = C.cubeById(st, cubeId) || st.cubes[0];
+    S.il.target.cube = cube.id; S.il.target.faces = [f];
+    if (!cube.faces[f]) {
+      var used = {}; st.cubes.forEach(function (c) { C.FACES.forEach(function (g) { if (c.faces[g]) used[c.faces[g]] = 1; }); });
+      var free = H.surfaces().map(function (z) { return z.s.key; }).filter(function (kk) { return kk && !used[kk]; });
+      if (free.length) { S.msg = 'Liguei a ' + surfName(free[0]) + ' na face ' + C.FACE_LABEL[f] + '.'; bindSurface(cube.id, f, free[0]); return; }
+      S.msg = 'Não tem tela livre. Crie uma superfície nova (botão de nova caixa) e escolha de novo.';
+    } else S.msg = 'Face ' + C.FACE_LABEL[f] + ' escolhida.';
+    changed('il-faces', true);
+  }
+  // Por cima do cubo 3D: nome da tela em cada face, face escolhida em rosa, face sob o mouse com contorno
+  function overlayFaces() {
+    var ctx = S.cv.getContext('2d'), fs = G.stageFaces ? G.stageFaces() : [], st = stage();
+    ctx.save(); ctx.font = '12px sans-serif'; ctx.textAlign = 'center'; ctx.lineJoin = 'round';
+    fs.forEach(function (f) {
+      if (!f.visible) return;
+      var cube = C.cubeById(st, f.cube); if (!cube) return;
+      var isT = f.cube === S.il.target.cube && S.il.target.faces.indexOf(f.face) >= 0, isH = S.hover && S.hover.cube === f.cube && S.hover.face === f.face;
+      ctx.beginPath(); f.poly.forEach(function (q, i) { if (i) ctx.lineTo(q[0], q[1]); else ctx.moveTo(q[0], q[1]); }); ctx.closePath();
+      if (isT) { ctx.fillStyle = 'rgba(255,79,163,.30)'; ctx.fill(); }
+      if (isT || isH) { ctx.lineWidth = isT ? 3 : 2; ctx.strokeStyle = isT ? '#ff4fa3' : '#ffffff'; ctx.stroke(); }
+      if (f.cube === S.il.target.cube || isH) {
+        var cx = 0, cy = 0; f.poly.forEach(function (q) { cx += q[0] / 4; cy += q[1] / 4; });
+        var k = cube.faces[f.face], txt = C.FACE_LABEL[f.face] + ' · ' + (k ? (surfName(k) || 'tela') : 'sem tela');
+        ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.8)'; ctx.strokeText(txt, cx, cy); ctx.fillStyle = k ? '#fff' : '#ffd36b'; ctx.fillText(txt, cx, cy);
+      }
+    });
+    ctx.restore();
+  }
   function secEasy() {
-    var b = box('facil', '1. Escolha a face do cubo'), st = stage();
+    var b = box('facil', '1. Escolha a face (clique nela no cubo 3D acima)'), st = stage();
     b.appendChild(selectRow('Cubo', st.cubes.map(function (c) { return [c.id, c.name + ' (' + c.size + ' pol)']; }), function () { return S.il.target.cube; }, function (v) { S.il.target.cube = v; changed('il-target', true); }, 'il-cube'));
     var cube = C.cubeById(st, S.il.target.cube) || st.cubes[0], cur = S.il.target.faces[0] || 'front', row = el('div', 'il-row'); row.style.flexWrap = 'wrap';
     C.FACES.forEach(function (f) {
       var k = cube.faces[f], x = btn(C.FACE_LABEL[f] + (k ? '' : ' (sem tela)'), function () {
-        S.il.target.faces = [f];
-        if (!cube.faces[f]) {
-          var used = {}; st.cubes.forEach(function (c) { C.FACES.forEach(function (g) { if (c.faces[g]) used[c.faces[g]] = 1; }); });
-          var free = H.surfaces().map(function (z) { return z.s.key; }).filter(function (kk) { return kk && !used[kk]; });
-          if (free.length) { bindSurface(cube.id, f, free[0]); S.msg = 'Liguei a ' + surfName(free[0]) + ' na face ' + C.FACE_LABEL[f] + '.'; return; }
-          S.msg = 'Não tem tela livre. Crie uma superfície nova (botão de nova caixa) e escolha de novo.';
-        }
-        changed('il-faces', true);
+        selectFace(cube.id, f);
       }, cur === f ? 'on' : '', 'il-pick-' + f);
       x.setAttribute('aria-pressed', cur === f ? 'true' : 'false'); row.appendChild(x);
     });
@@ -513,7 +536,7 @@
     if (!S.cv || !S.cv.isConnected) return;
     var pt = previewTimes();
     var t = pt.bound && pt.ill ? pt.t : S.tFree;
-    try { G.drawStage(S.cv, { rig: stage(), il: S.il, ill: pt.ill, t: t, view: S.view, orbit: S.orbit }); } catch (e) { /* o status mostra o motivo */ }
+    try { G.drawStage(S.cv, { rig: stage(), il: S.il, ill: pt.ill, t: t, view: S.view, orbit: S.orbit, focus: !S.adv }); if (!S.adv && S.view === 'free') overlayFaces(); } catch (e) { /* o status mostra o motivo */ }
     var nowT = Date.now();
     if (S.lastStatus && nowT - S.lastStatus < 600) return;   // o texto de status só muda a cada 0,6 s: evita o painel tremer
     S.lastStatus = nowT;
@@ -565,6 +588,13 @@
     var w = el('div', 'il-wrap');
     var head = el('div', 'il-row'); head.appendChild(el('h2', null, '3D Illusion Creator')); w.appendChild(head);
     var cv = el('canvas', 'il-cv'); cv.id = 'il-canvas'; cv.width = 560; cv.height = 350; cv.setAttribute('role', 'img'); cv.setAttribute('aria-label', 'Prévia da ilusão 3D'); S.cv = cv; w.appendChild(cv);
+    if (!S.adv) {
+      cv.style.cursor = 'grab'; cv.style.touchAction = 'none';
+      var vr0 = el('div', 'il-row'); vr0.style.flexWrap = 'wrap';
+      [['De frente', 0, 8], ['De canto', 35, 22], ['De cima', 20, 70]].forEach(function (a3) { vr0.appendChild(btn(a3[0], function () { S.view = 'free'; S.il.camera.view = 'free'; S.orbit.yaw = a3[1]; S.orbit.pitch = a3[2]; }, null, 'il-ang-' + a3[2])); });
+      w.appendChild(vr0);
+      w.appendChild(el('p', 'il-note', 'Arraste para girar o cubo, role para aproximar e clique numa face para escolher.'));
+    }
     var stt = el('p', 'il-note'); stt.id = 'il-status'; stt.style.cssText = 'min-height:34px;overflow:hidden;font-variant-numeric:tabular-nums'; w.appendChild(stt);
     var msg = el('p', 'il-note il-ok'); msg.id = 'il-msg'; msg.textContent = S.msg; msg.setAttribute('role', 'status'); w.appendChild(msg);
     var ar = el('div', 'il-row');
@@ -587,9 +617,18 @@
     if (sec.parentNode) sec.parentNode.scrollTop = scroll;
     // câmera livre: arrastar gira, rolar aproxima
     var drag = null;
-    cv.addEventListener('pointerdown', function (e) { if (S.view !== 'free') return; drag = { x: e.clientX, y: e.clientY, yaw: S.orbit.yaw, pitch: S.orbit.pitch }; cv.setPointerCapture(e.pointerId); });
-    cv.addEventListener('pointermove', function (e) { if (!drag) return; S.orbit.yaw = drag.yaw - (e.clientX - drag.x) * 0.4; S.orbit.pitch = Math.max(-10, Math.min(85, drag.pitch + (e.clientY - drag.y) * 0.4)); });
-    cv.addEventListener('pointerup', function () { drag = null; });
+    function cpos(e) { var r = cv.getBoundingClientRect(); return [(e.clientX - r.left) * cv.width / Math.max(1, r.width), (e.clientY - r.top) * cv.height / Math.max(1, r.height)]; }
+    cv.addEventListener('pointerdown', function (e) { if (S.view !== 'free') return; drag = { x: e.clientX, y: e.clientY, yaw: S.orbit.yaw, pitch: S.orbit.pitch, moved: false }; cv.setPointerCapture(e.pointerId); });
+    cv.addEventListener('pointermove', function (e) {
+      if (!drag) { if (!S.adv && S.view === 'free' && G.pickFace) { var h = G.pickFace.apply(null, cpos(e)); S.hover = h; cv.style.cursor = h ? 'pointer' : 'grab'; } return; }
+      if (Math.abs(e.clientX - drag.x) + Math.abs(e.clientY - drag.y) > 5) drag.moved = true;
+      S.orbit.yaw = drag.yaw - (e.clientX - drag.x) * 0.4; S.orbit.pitch = Math.max(-10, Math.min(85, drag.pitch + (e.clientY - drag.y) * 0.4));
+    });
+    cv.addEventListener('pointerleave', function () { S.hover = null; });
+    cv.addEventListener('pointerup', function (e) {
+      var was = drag; drag = null;
+      if (was && !was.moved && !S.adv && S.view === 'free' && G.pickFace) { var h = G.pickFace.apply(null, cpos(e)); if (h) selectFace(h.cube, h.face); }
+    });
     cv.addEventListener('wheel', function (e) { if (S.view !== 'free') return; e.preventDefault(); S.orbit.dist = Math.max(30, Math.min(400, S.orbit.dist * (e.deltaY > 0 ? 1.08 : 0.92))); }, { passive: false });
     paint();
   }
@@ -599,6 +638,7 @@
     if (!sec || !C || !G || !T) return;
     if (!document.getElementById('il-css')) { var st = el('style'); st.id = 'il-css'; st.textContent = CSS; document.head.appendChild(st); }
     newIllusion(S.adv ? 'infinite-room' : 'room-builder'); S.msg = '';
+    if (!S.adv) { S.view = 'free'; S.il.camera.view = 'free'; S.orbit = { yaw: 30, pitch: 24, dist: 38 }; }
     S.t0 = performance.now();
     render();
     if (!S.raf) S.raf = requestAnimationFrame(loop);

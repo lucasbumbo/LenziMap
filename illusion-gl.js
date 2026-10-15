@@ -415,6 +415,11 @@
   }
 
   // Desenha o palco inteiro num canvas 2D. opts: {rig, il, ill, t, view:'audience'|'free'|'projector', orbit:{yaw,pitch,dist}, size}
+  var lastFaces = [];
+  function inPoly(poly, x, y) { var ins = false, i, j; for (i = 0, j = poly.length - 1; i < poly.length; j = i++) { if (((poly[i][1] > y) !== (poly[j][1] > y)) && (x < (poly[j][0] - poly[i][0]) * (y - poly[i][1]) / (poly[j][1] - poly[i][1]) + poly[i][0])) ins = !ins; } return ins; }
+  // Faces do último desenho do palco, em pixels do canvas, e qual face está embaixo do ponto (x, y)
+  function stageFaces() { return lastFaces; }
+  function pickFace(x, y) { var best = null; lastFaces.forEach(function (f) { if (f.visible && inPoly(f.poly, x, y) && (!best || f.dist < best.dist)) best = f; }); return best ? { cube: best.cube, face: best.face } : null; }
   function drawStage(target, opts) {
     var W = target.width, H = target.height, tctx = target.getContext('2d'), rig = opts.rig || C.defaultStage(), il = getIl(opts.il), t = opts.t || 0, view = opts.view || 'audience', ext = opts.faceTextures || null;
     // Base compartilhada (Stage Preview 3D, 3.0 fase 12): sem ilusão, desenha só os canvases em opts.faceTextures {'cubo:face': canvas}
@@ -448,11 +453,25 @@
       var dv = C.v.len(C.v.sub(rig.viewer.pos, tg.pos)) || 1;
       cen = tg.pos.slice(); fovV = Math.max(10, Math.min(60, 2 * Math.atan2(tg.size * 1.5, dv) * 180 / Math.PI));
     }
+    if (view === 'free' && opts.focus && tg && tg.pos) cen = tg.pos.slice();
     if (view === 'free') {
       var o = opts.orbit || { yaw: 25, pitch: 20, dist: 150 }, ya = o.yaw * Math.PI / 180, pa = o.pitch * Math.PI / 180;
       eye = [cen[0] + Math.sin(ya) * Math.cos(pa) * o.dist, cen[1] + Math.sin(pa) * o.dist, cen[2] + Math.cos(ya) * Math.cos(pa) * o.dist];
     } else eye = rig.viewer.pos.slice();
     var VP = C.m.mul(C.m.perspective(fovV, W / H, 1, 3000), C.m.lookAt(eye, cen, [0, 1, 0]));
+    lastFaces = [];
+    rig.cubes.forEach(function (cube) {
+      C.FACES.forEach(function (fc) {
+        var fr = C.faceFrame(cube, fc), poly = [], ok = true;
+        fr.corners.forEach(function (q) {
+          var cx = VP[0] * q[0] + VP[4] * q[1] + VP[8] * q[2] + VP[12], cy = VP[1] * q[0] + VP[5] * q[1] + VP[9] * q[2] + VP[13], cw = VP[3] * q[0] + VP[7] * q[1] + VP[11] * q[2] + VP[15];
+          if (cw <= 0.01) { ok = false; return; }
+          poly.push([(cx / cw * 0.5 + 0.5) * W, (1 - (cy / cw * 0.5 + 0.5)) * H]);
+        });
+        if (!ok) return;
+        lastFaces.push({ cube: cube.id, face: fc, poly: poly, visible: C.visibleFrom(fr, eye), dist: C.v.len(C.v.sub(fr.center, eye)) });
+      });
+    });
     gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LEQUAL); gl.disable(gl.CULL_FACE);
     // chão e arestas dos cubos (programa principal, linhas emissivas)
     var L = new Batch(), flr = new Batch(), I = C.m.ident(), g = 40, gi;
@@ -494,7 +513,7 @@
   function readPixel(x, y) { var px = new Uint8Array(4); if (!gl) return null; gl.readPixels(x, cv.height - 1 - y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); return Array.prototype.slice.call(px); }
 
   root.IllusionGL = {
-    draw: draw, drawStage: drawStage, faceTexture: faceTexture, hasGl: function () { return !!ensureGl(); }, status: status, mediaStatus: mediaStatus,
+    draw: draw, drawStage: drawStage, stageFaces: stageFaces, pickFace: pickFace, faceTexture: faceTexture, hasGl: function () { return !!ensureGl(); }, status: status, mediaStatus: mediaStatus,
     setStatusHandler: function (fn) { onStatus = fn; }, readPixel: readPixel, sizeFor: sizeFor, _renderFace: function (r, il, ill, w, h) { if (!ensureGl()) return null; return renderFaceGL(r, getIl(il), ill, w, h); },
     _cv: function () { return cv; }, _forceLoss: function () { if (gl) { var e = gl.getExtension('WEBGL_lose_context'); if (e) e.loseContext(); } }
   };
