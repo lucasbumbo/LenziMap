@@ -203,8 +203,7 @@
     ctx.restore();
   }
   function secEasy() {
-    var b = box('facil', '1. Escolha a face (ou clique nela no cubo)'), st = stage();
-    b.appendChild(selectRow('Cubo', st.cubes.map(function (c) { return [c.id, c.name + ' (' + c.size + ' pol)']; }), function () { return S.il.target.cube; }, function (v) { selectFace(v, S.il.target.faces[0] || 'front'); }, 'il-cube'));
+    var b = box('facil', '1. Escolha a face'), st = stage();
     var cube = C.cubeById(st, S.il.target.cube) || st.cubes[0], cur = S.il.target.faces[0] || 'front', row = el('div', 'il-row'); row.style.flexWrap = 'wrap';
     C.FACES.forEach(function (f) {
       var k = cube.faces[f], x = btn(C.FACE_LABEL[f], function () {
@@ -218,10 +217,9 @@
   }
   function secEasy3d() {
     var f0 = curFace(), jn = isJoined() ? C.JOINS[S.il.room.join] : null, R = S.il.room, st0 = stage(), cube0 = C.cubeById(st0, S.il.target.cube) || st0.cubes[0];
-    var b = box('r3d', jn ? '2 a 4. Sala na quina: ' + C.FACE_LABEL[jn.a] + ' + ' + C.FACE_LABEL[jn.b] : '2 a 4. Sala da face ' + C.FACE_LABEL[f0]);
+    var b = box('r3d', jn ? '2. Escolha a sala (quina: ' + C.FACE_LABEL[jn.a] + ' + ' + C.FACE_LABEL[jn.b] + ')' : '2. Escolha a sala');
     S.rcv = null;
     // passo 2: tipo de sala (botões grandes)
-    b.appendChild(el('p', 'il-note', '2. Escolha o tipo de sala'));
     var defs = { corredor: ['🚪 Corredor', { back: 1, left: 1, right: 1, floor: 1, ceiling: 1 }, 90], quarto: ['🛏️ Quarto', { back: 1, left: 1, right: 1, floor: 1, ceiling: 1 }, 40], caixa: ['📦 Caixa funda', { back: 1 }, 70], chao: ['⬛ Chão e fundo', { back: 1, floor: 1 }, 70] };
     var rowS = el('div', 'il-row'); rowS.style.flexWrap = 'wrap';
     Object.keys(defs).forEach(function (k) {
@@ -234,25 +232,27 @@
       }, S.sala === k ? 'on' : '', 'il-sala-' + k));
     });
     b.appendChild(rowS);
-    var ring = ['front', 'right', 'back', 'left'], ix = ring.indexOf(f0);
-    if (ix >= 0) {
-      var kn = ring[ix] + '+' + ring[(ix + 1) % 4], kp = ring[(ix + 3) % 4] + '+' + ring[ix];
-      b.appendChild(selectRow('Sala na quina (duas faces juntas)', [['', 'Não, só esta face'], [kn, 'Com a face ' + C.FACE_LABEL[ring[(ix + 1) % 4]]], [kp, 'Com a face ' + C.FACE_LABEL[ring[(ix + 3) % 4]]]], function () { return R.join || ''; }, function (v) { setJoin(v); }, 'il-join'));
-    }
     // passo 3: profundidade
-    b.appendChild(el('p', 'il-note', '3. Quanto fundo?'));
+    b.appendChild(el('p', 'il-note', '3. Quanto fundo? (para a direita fica mais fundo)'));
     var P = C.PARAMS.depth;
     slider(b, 'Profundidade do fundo (pol)', function () { return S.il.params.depth; }, function (v) { S.il.params.depth = v; changed('il-p:depth'); }, P.min, P.max, P.step, { kf: 'depth' });
-    // passo 4: cores e imagens
+    b.appendChild(S._ar2); S._ar2.className = 'il-row il-big'; b.appendChild(S._msg);
+    // cores e imagens
     var label = { back: 'Fundo', left: 'Parede esquerda', right: 'Parede direita', floor: 'Chão', ceiling: 'Teto' };
     if (jn) { label.back = 'Parede do fundo (direita)'; label.right = 'Parede do fundo (esquerda)'; }
     var cores = el('details', 'il-box'); cores.id = 'il-cores'; cores.open = !!S.open.cores; cores.addEventListener('toggle', function () { S.open.cores = cores.open; });
-    cores.appendChild(el('summary', null, '4. Cores e imagens (opcional)'));
+    cores.appendChild(el('summary', null, 'Cores e imagens (opcional)'));
     var fino = el('details', 'il-box'); fino.id = 'il-fino'; fino.open = !!S.open.fino; fino.addEventListener('toggle', function () { S.open.fino = fino.open; });
     fino.appendChild(el('summary', null, 'Mais opções (só se precisar)'));
     var dl = el('label', null, 'Duração (s) '), dn = el('input'); dn.type = 'number'; dn.min = 1; dn.max = 600; dn.step = 1; dn.value = S.dur; dn.id = 'il-dur'; dn.style.width = '64px'; dn.addEventListener('change', function () { S.dur = Math.max(1, Math.min(600, +dn.value || 8)); });
     dn.addEventListener('keydown', function (e) { e.stopPropagation(); });
     dl.appendChild(dn); fino.appendChild(dl);
+    fino.appendChild(selectRow('Cubo', st0.cubes.map(function (c) { return [c.id, c.name + ' (' + c.size + ' pol)']; }), function () { return S.il.target.cube; }, function (v) { selectFace(v, S.il.target.faces[0] || 'front'); }, 'il-cube'));
+    var ring = ['front', 'right', 'back', 'left'], ix = ring.indexOf(f0);
+    if (ix >= 0) {
+      var kn = ring[ix] + '+' + ring[(ix + 1) % 4], kp = ring[(ix + 3) % 4] + '+' + ring[ix];
+      fino.appendChild(selectRow('Sala na quina (duas faces juntas)', [['', 'Não, só esta face'], [kn, 'Com a face ' + C.FACE_LABEL[ring[(ix + 1) % 4]]], [kp, 'Com a face ' + C.FACE_LABEL[ring[(ix + 3) % 4]]]], function () { return R.join || ''; }, function (v) { setJoin(v); }, 'il-join'));
+    }
     var cur0 = S.il.target.faces[0] || 'front';
     fino.appendChild(selectRow('Tela (superfície) desta face', surfaceOptions(), function () { return cube0.faces[cur0] || ''; }, function (v) { bindSurface(cube0.id, cur0, v); }, 'il-bind-' + cur0));
     slider(fino, 'Girar o 3D (graus, esquerda/direita)', function () { return S.il.camera.yaw || 0; }, function (v) { S.il.camera.yaw = v; changed('il-cam'); }, -80, 80, 1);
@@ -679,7 +679,7 @@
     }
     if (S.quick && T.QUICK[S.il.preset]) keys = T.QUICK[S.il.preset][0].keys(S.dur);
     var b = T.apply(S.il, hostObj(), { duration: S.dur, keys: keys });
-    if (b.ok) { S.assetId = b.assetId; S.il = clone(T.illusionOf(seq(), b.assetId) || S.il); S.msg = (!S.adv && S.il.preset === 'room-builder' ? 'Pronto! A sala está na face ' + S.il.target.faces.map(function (g) { return C.FACE_LABEL[g]; }).join(' e ') + '. Aperte o play da timeline para ver.' : 'Aplicado: ' + b.clipIds.length + ' clipe(s) na timeline, começando em ' + b.at.toFixed(2) + ' s.') + (b.warnings.length ? ' Avisos: ' + b.warnings.join(' ') : ''); }
+    if (b.ok) { S.assetId = b.assetId; S.il = clone(T.illusionOf(seq(), b.assetId) || S.il); S.msg = (!S.adv && S.il.preset === 'room-builder' ? 'Pronto! A sala está na face ' + S.il.target.faces.map(function (g) { return C.FACE_LABEL[g]; }).join(' e ') + '. Aperte o play da timeline para ver. Se mudar algo aqui, vale na hora.' : 'Aplicado: ' + b.clipIds.length + ' clipe(s) na timeline, começando em ' + b.at.toFixed(2) + ' s.') + (b.warnings.length ? ' Avisos: ' + b.warnings.join(' ') : ''); }
     else S.msg = (b.errors && b.errors[0]) || b.warnings.join(' ') || 'Não consegui aplicar.';
     render();
   }
@@ -689,17 +689,17 @@
     var keep = sec.querySelector('details[open]') ? null : null, scroll = sec.parentNode ? sec.parentNode.scrollTop : 0;
     sec.textContent = ''; S.lastStatus = 0;
     var w = el('div', 'il-wrap' + (!S.adv ? ' il-kid' : ''));
-    var head = el('div', 'il-row'); head.appendChild(el('h2', null, '3D Illusion Creator')); w.appendChild(head);
-    var cv = el('canvas', 'il-cv'); cv.id = 'il-canvas'; cv.width = 560; cv.height = 350; cv.setAttribute('role', 'img'); cv.setAttribute('aria-label', 'Prévia da ilusão 3D'); S.cv = cv; w.appendChild(cv);
+    var head = el('div', 'il-row'); head.appendChild(el('h2', null, S.adv ? '3D Illusion Creator' : 'Sala 3D')); w.appendChild(head);
+    var cv = el('canvas', 'il-cv'); cv.id = 'il-canvas'; cv.width = 560; cv.height = S.adv ? 350 : 260; cv.setAttribute('role', 'img'); cv.setAttribute('aria-label', 'Prévia da ilusão 3D'); S.cv = cv; w.appendChild(cv);
     if (!S.adv) {
       cv.style.cursor = 'grab'; cv.style.touchAction = 'none';
       var vr0 = el('div', 'il-row'); vr0.style.flexWrap = 'wrap';
       [['De frente', 0, 8], ['De canto', 35, 22], ['De cima', 20, 70]].forEach(function (a3) { vr0.appendChild(btn(a3[0], function () { S.view = 'free'; S.il.camera.view = 'free'; S.orbit.yaw = a3[1]; S.orbit.pitch = a3[2]; }, null, 'il-ang-' + a3[2])); });
       w.appendChild(vr0);
-      w.appendChild(el('p', 'il-note', 'Arraste para girar o cubo, role para aproximar e clique numa face para escolher.'));
+      w.appendChild(el('p', 'il-note', 'Clique numa face do cubo para escolher. Arraste para girar.'));
     }
-    var stt = el('p', 'il-note'); stt.id = 'il-status'; stt.style.cssText = 'min-height:34px;overflow:hidden;font-variant-numeric:tabular-nums'; w.appendChild(stt);
-    var msg = el('p', 'il-note il-ok'); msg.id = 'il-msg'; msg.textContent = S.msg; msg.setAttribute('role', 'status'); w.appendChild(msg);
+    var stt = el('p', 'il-note'); stt.id = 'il-status'; stt.style.cssText = 'min-height:34px;overflow:hidden;font-variant-numeric:tabular-nums' + (S.adv ? '' : ';display:none'); w.appendChild(stt);
+    var msg = el('p', 'il-note il-ok'); msg.id = 'il-msg'; msg.textContent = S.msg; msg.setAttribute('role', 'status'); S._msg = msg; if (S.adv) w.appendChild(msg);
     var easy = !S.adv && S.il.preset === 'room-builder';
     if (!easy) {
     var ar = el('div', 'il-row');
@@ -711,11 +711,10 @@
     }
     var ar2 = el('div', 'il-row');
     if (!(easy && S.assetId)) ar2.appendChild(btn(S.assetId ? 'Aplicar de novo (nova camada)' : (easy ? 'Colocar na face' : 'Aplicar na Timeline'), applyNow, 'primary', 'il-apply'));
-    else ar2.appendChild(el('p', 'il-note il-ok', 'Já está na face. Mude a sala, a profundidade ou as cores e vale na hora.'));
     if (S.assetId) ar2.appendChild(btn(easy ? 'Tirar da face' : 'Desfazer aplicação', function () { var asset = S.assetId; H.checkpoint('il-remove'); T.removeAll(seq(), asset); S.assetId = null; H.syncClock(); H.renderAll(); S.msg = 'Ilusão removida da timeline. Ela voltou a ser rascunho.'; render(); }, null, 'il-remove'));
+    S._ar2 = ar2;
     if (!easy) w.appendChild(ar2);
     (easy ? [secEasy, secEasy3d] : [secIllusion, secTarget].concat(S.il.preset === 'room-builder' ? [secRoom] : [], [secGeometry, secParams, secCamera, secLight, secMaterial, secAnim, secQuality, secPresets])).forEach(function (f) { w.appendChild(f()); });
-    if (easy) { ar2.className = 'il-row il-big'; w.appendChild(ar2); }
     var al = el('label', 'il-note'), ac = el('input'); ac.type = 'checkbox'; ac.id = 'il-adv'; ac.checked = S.adv;
     ac.addEventListener('change', function () { S.adv = ac.checked; try { localStorage.setItem('lenzi-il-adv', S.adv ? '1' : '0'); } catch (e) {} render(); });
     al.appendChild(ac); al.appendChild(document.createTextNode(' Opções avançadas (para quem entende do assunto)')); w.appendChild(al);
