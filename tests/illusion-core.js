@@ -172,9 +172,10 @@ ok(C.KF_PARAMS.indexOf('depth') >= 0 && C.KF_PARAMS.indexOf('flow') < 0, 'animá
   const il2 = JSON.parse(JSON.stringify(il)); il2.room.walls.back.media = { src: 'blob:http://x/1', name: 'g.gif' };
   il2.room.sprites.push({ id: 'q', x: 0, y: 0, z: -10, size: 5, media: { src: 'blob:http://x/2', name: 'p.png' } });
   const sc = C.buildScene(C.validate(il2, null).value, null, 0.5, 8);
-  ok(sc.quads.length === 2 && sc.quads.some(q => q.solid && q.id === 'wall:back') && sc.quads.some(q => !q.solid && q.sprite), 'cena: parede com mídia e objeto viram planos texturizados');
+  const vq = sc.quads.filter(q => !q.pickOnly);
+  ok(vq.length === 2 && vq.some(q => q.solid && q.id === 'wall:back') && vq.some(q => !q.solid && q.sprite), 'cena: parede com mídia e objeto viram planos texturizados');
   const sc0 = C.buildScene(il, null, 0.5, 8);
-  ok(sc0.quads.length === 0 && sc0.prims.length > 5, 'cena sem mídia usa só primitivas coloridas');
+  ok(sc0.quads.filter(q => !q.pickOnly).length === 0 && sc0.prims.length > 5, 'cena sem mídia usa só primitivas coloridas');
   const zs = sc0.prims.map(q => q.p[2]); ok(Math.min.apply(null, zs) >= -il.params.depth - 1e-6, 'sala: nada passa do fundo');
   il.room.walls.left.on = false; il.room.walls.right.on = false; il.room.walls.floor.on = false; il.room.walls.back.on = false;
   ok(C.buildScene(il, null, 0, 8).prims.length >= 1, 'sala sem nenhuma parede não quebra');

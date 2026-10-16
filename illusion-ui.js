@@ -6,10 +6,14 @@
   var C = root.IllusionCore, G = root.IllusionGL, T = root.IllusionTimeline, Seq = root.Sequence;
   var H = null, sec = null;
   var PRESETS_KEY = 'lenzi-illusion-presets';
-  var S = { il: null, assetId: null, view: 'audience', orbit: { yaw: 30, pitch: 22, dist: 90 }, playing: true, t0: 0, tFree: 0, dur: 8, quick: true, msg: '', cv: null, raf: 0, lastSel: null, open: { ilusao: true, alvo: true, prof: true, sala: true, facil: true, vista: true, prof2: true, r3d: true }, adv: false, faceIl: {} };
+  var S = { il: null, assetId: null, view: 'audience', orbit: { yaw: 30, pitch: 22, dist: 90 }, playing: true, t0: 0, tFree: 0, dur: 8, quick: true, msg: '', cv: null, raf: 0, lastSel: null, open: { ilusao: true, alvo: true, prof: true, sala: true, facil: true, vista: true, prof2: true, r3d: true, catalogo: true }, adv: false, faceIl: {} };
   try { S.adv = localStorage.getItem('lenzi-il-adv') === '1'; } catch (e) {}
 
-  var CSS = '.il-wrap{display:flex;flex-direction:column;gap:10px}.il-wrap h2{margin:0}.il-box{border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:8px;display:flex;flex-direction:column;gap:8px}' +
+  var CSS_SIMS = '.il-tabs{display:flex;gap:4px;flex-wrap:wrap}.il-tabs button{flex:1 1 auto;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:transparent;color:inherit;font:inherit;cursor:pointer}.il-tabs button.on{background:var(--accent);color:#fff;border-color:var(--accent)}' +
+    '.il-th-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px}.il-th{display:flex;flex-direction:column;gap:4px;align-items:center;padding:6px;border-radius:10px;border:2px solid var(--line);background:rgba(255,255,255,.04);color:inherit;font:inherit;font-size:12px;cursor:pointer}' +
+    '.il-th img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:6px;background:#10131c}.il-th.on{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}.il-th span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
+    '.il-selbar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:6px 8px;border-radius:10px;border:1px solid var(--accent);background:rgba(255,79,163,.10)}.il-selbar b{flex:1 1 100%}.il-selbar button{flex:1 1 auto}';
+  var CSS = CSS_SIMS + '.il-wrap{display:flex;flex-direction:column;gap:10px}.il-wrap h2{margin:0}.il-box{border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:8px;display:flex;flex-direction:column;gap:8px}' +
     '.il-box>summary{cursor:pointer;font-weight:600;font-size:13px}.il-cards{display:grid;grid-template-columns:1fr 1fr;gap:6px}.il-card{font:inherit;text-align:left;border:1px solid var(--line);background:var(--panel-2);color:var(--fg);border-radius:8px;padding:8px;cursor:pointer;display:flex;flex-direction:column;gap:2px}' +
     '.il-card b{font-size:13px}.il-card span{font-size:11px;color:var(--muted)}.il-card.on{border-color:var(--accent)}.il-card.first{grid-column:1/3}' +
     '.il-kid .il-row button{font-size:15px;padding:10px 14px;min-height:44px}.il-kid .il-big button{font-size:18px;padding:14px 20px;min-height:54px;width:100%}.il-sticky{position:sticky;top:-18px;z-index:20;background:var(--panel);padding:20px 0 8px;display:flex;flex-direction:column;gap:8px;box-shadow:0 6px 10px -6px #000}.il-sticky .il-cv{max-height:34vh;width:auto;max-width:100%;margin:0 auto}.il-kid .il-note{font-size:15px}.il-kid .il-box{padding:14px;gap:12px;border-radius:14px}.il-kid .il-box>summary{font-size:20px;font-weight:700}.il-kid .il-row button{flex:1 1 auto;border-radius:12px}.il-kid .il-row button.on{background:var(--accent);color:#fff;border-color:var(--accent)}.il-kid .il-step{font-size:18px;font-weight:700;color:var(--fg);margin:6px 0 0}.il-kid label.field span{font-size:16px;font-weight:700;color:var(--fg)}.il-kid .il-box select{font-size:17px;padding:12px;border-radius:10px}.il-kid .il-sl{font-size:15px}.il-kid .il-sl input[type=range]{height:34px}.il-kid .il-ok{font-size:16px;font-weight:600}.il-kid #il-cores>summary,.il-kid #il-fino>summary{font-size:15px;font-weight:600;color:var(--muted)}' +
@@ -259,6 +263,99 @@
       }
     });
     ctx.restore();
+  }
+  // ---------- estilo The Sims: catálogo de imagens, pincel, seleção com destaque ----------
+  function floorYNow() { var cb = C.cubeById(stage(), S.il.target.cube) || stage().cubes[0], h = cb.size / 2, jn = isJoined() ? C.JOINS[S.il.room.join] : null; return jn && jn.top ? C.floorY(h, S.il.params.depth) : -h; }
+  function clampToRoom(nx, nz) {
+    var cb = C.cubeById(stage(), S.il.target.cube) || stage().cubes[0], h = cb.size / 2, D = Math.max(8, S.il.params.depth);
+    if (isJoined()) { nx = Math.max(h - D, Math.min(h, nx)); nz = Math.max(h - D, Math.min(h, nz)); } else { nx = Math.max(-h, Math.min(h, nx)); nz = Math.max(-D, Math.min(0, nz)); }
+    return [Math.max(-60, Math.min(60, nx)), Math.max(-600, Math.min(60, nz))];
+  }
+  function spriteOf(id) { return S.il.room.sprites.filter(function (z) { return 'sp:' + z.id === id; })[0] || null; }
+  function layerLive(id) { return !!id && (id.indexOf('wall:') === 0 ? !!S.il.room.walls[id.slice(5)] : !!spriteOf(id)); }
+  function layerName(id) {
+    if (!id) return '';
+    if (id.indexOf('wall:') === 0) { var k = id.slice(5), jn = isJoined(); return ({ back: jn ? 'Parede da direita' : 'Parede do fundo', right: jn ? 'Parede da esquerda' : 'Parede direita', left: 'Parede esquerda', floor: 'Piso', ceiling: 'Teto' })[k] || k; }
+    var q = spriteOf(id); return q ? q.name : 'Personagem';
+  }
+  function niceName(m) { return String(m && m.name || 'Personagem').replace(/^[^-]+ - /, '').replace(/\.[^.]+$/, '').slice(0, 30); }
+  function applyTool(hit) {
+    var R = S.il.room;
+    if (S.tool.kind === 'tex') {
+      if (hit.id.indexOf('wall:') !== 0) return false;
+      var k = hit.id.slice(5), w = R.walls[k]; if (!w) return false;
+      w.media = S.tool.media; w.on = true; w.tf = { x: 0, y: 0, s: 1, r: 0 }; S.selId = hit.id; S.msg = 'Pintei: ' + layerName(hit.id) + '. ↶ Desfazer volta.';
+      changed('il-paint', true); return true;
+    }
+    if (!hit.rp) return false;
+    if (R.sprites.length >= C.MAX_SPRITES) { S.msg = 'Máximo de ' + C.MAX_SPRITES + ' personagens e painéis na sala.'; render(); return true; }
+    var cb = C.cubeById(stage(), S.il.target.cube) || stage().cubes[0], size = Math.max(2, cb.size / 2 * 1.5), id = 'sp' + Math.random().toString(36).slice(2, 7), pos = clampToRoom(hit.rp[0], hit.rp[2]);
+    R.sprites.push({ id: id, name: niceName(S.tool.media), x: pos[0], y: floorYNow() + size / 2, z: pos[1], size: size, media: S.tool.media, fx: '' });
+    S.selId = 'sp:' + id; S.msg = 'Coloquei ' + niceName(S.tool.media) + ' no chão. Arraste para mover. ↶ Desfazer volta.';
+    changed('il-room', true); return true;
+  }
+  function selAction(a) {
+    var id = S.selId; if (!layerLive(id)) { S.selId = null; render(); return; }
+    var R = S.il.room;
+    if (id.indexOf('sp:') === 0) {
+      var q = spriteOf(id);
+      if (a === 'big') q.size = Math.min(80, q.size * 1.15); else if (a === 'small') q.size = Math.max(0.5, q.size / 1.15);
+      else if (a === 'del') { R.sprites.splice(R.sprites.indexOf(q), 1); S.selId = null; }
+    } else {
+      var w = R.walls[id.slice(5)];
+      if (a === 'center') w.tf = { x: 0, y: 0, s: 1, r: 0 }; else if (a === 'del') w.media = null;
+    }
+    changed('il-sel', true);
+  }
+  function selBar() {
+    if (S.selId && !layerLive(S.selId)) S.selId = null;
+    if (!S.tool && !S.selId) return null;
+    var d = el('div', 'il-selbar'); d.id = 'il-selbar';
+    if (S.tool) { d.appendChild(el('b', null, 'Pincel: ' + niceName(S.tool.media) + ' (clique no cubo)')); d.appendChild(btn('Parar pincel', function () { S.tool = null; render(); }, null, 'il-tool-off')); }
+    if (S.selId) {
+      d.appendChild(el('b', null, 'Selecionado: ' + layerName(S.selId)));
+      if (S.selId.indexOf('sp:') === 0) { d.appendChild(btn('Maior', function () { selAction('big'); }, null, 'il-sel-big')); d.appendChild(btn('Menor', function () { selAction('small'); }, null, 'il-sel-small')); d.appendChild(btn('Tirar', function () { selAction('del'); }, null, 'il-sel-del')); }
+      else { d.appendChild(btn('Imagem ao centro', function () { selAction('center'); }, null, 'il-sel-center')); d.appendChild(btn('Tirar imagem', function () { selAction('del'); }, null, 'il-sel-del')); }
+      d.appendChild(btn('Soltar', function () { S.selId = null; render(); }, null, 'il-sel-off'));
+    }
+    return d;
+  }
+  function secCatalogo() {
+    var b = box('catalogo', 'Catálogo: escolha e clique no cubo');
+    S.catTab = S.catTab || 'parede';
+    var tabs = el('div', 'il-tabs');
+    [['parede', 'Paredes'], ['piso', 'Pisos'], ['personagem', 'Personagens']].forEach(function (t) { tabs.appendChild(btn(t[1], function () { S.catTab = t[0]; render(); }, S.catTab === t[0] ? 'on' : '', 'il-cat-' + t[0])); });
+    b.appendChild(tabs);
+    var grid = el('div', 'il-th-grid'); grid.id = 'il-catalogo'; b.appendChild(grid);
+    b.appendChild(el('p', 'il-note', S.catTab === 'personagem' ? 'Clique num personagem e depois no piso do cubo para colocar. Arraste para mover.' : 'Clique numa imagem e depois numa parede ou no piso do cubo para pintar.'));
+    appLibImages(function (lib) {
+      var re = S.catTab === 'parede' ? /^(Parede|GIF) - / : (S.catTab === 'piso' ? /^(Piso|GIF) - / : /^Personagem - /);
+      lib.filter(function (m) { return re.test(m.name); }).forEach(function (m) {
+        var on = S.tool && S.tool.media && S.tool.media.path === m.path, th = el('button', 'il-th' + (on ? ' on' : '')); th.type = 'button'; th.title = m.name; th.setAttribute('aria-pressed', on ? 'true' : 'false');
+        var im = el('img'); im.src = m.src; im.alt = m.name; th.appendChild(im); th.appendChild(el('span', null, niceName(m)));
+        th.addEventListener('click', function () {
+          S.tool = on ? null : { kind: S.catTab === 'personagem' ? 'sprite' : 'tex', media: m };
+          S.msg = S.tool ? (S.tool.kind === 'sprite' ? 'Personagem escolhido. Clique no piso do cubo para colocar.' : 'Imagem escolhida. Clique numa parede ou no piso do cubo para pintar.') : 'Pincel desligado.';
+          render();
+        });
+        grid.appendChild(th);
+      });
+      if (!grid.childNodes.length) grid.appendChild(el('p', 'il-note', 'Sem imagens desta categoria na biblioteca do app.'));
+    });
+    return b;
+  }
+  function overlayRoom() {
+    var ids = []; if (S.selId) ids.push(S.selId); if (S.hoverId && S.hoverId !== S.selId) ids.push(S.hoverId);
+    if (!ids.length) return;
+    var list = G.roomOutline(stage(), S.il, ids), ctx = S.cv.getContext('2d');
+    list.forEach(function (fo) {
+      ctx.save(); ctx.beginPath(); fo.poly.forEach(function (q, i) { if (i) ctx.lineTo(q[0], q[1]); else ctx.moveTo(q[0], q[1]); }); ctx.closePath(); ctx.clip();
+      fo.shapes.forEach(function (sh) {
+        var sel = sh.id === S.selId; ctx.beginPath(); sh.pts.forEach(function (q, i) { if (i) ctx.lineTo(q[0], q[1]); else ctx.moveTo(q[0], q[1]); }); ctx.closePath();
+        ctx.fillStyle = sel ? 'rgba(255,79,163,.20)' : 'rgba(255,255,255,.16)'; ctx.fill(); ctx.lineWidth = sel ? 3 : 2; ctx.strokeStyle = sel ? '#ff4fa3' : '#ffffff'; ctx.stroke();
+      });
+      ctx.restore();
+    });
   }
   function secEasy() {
     var b = box('facil', '1. Escolha a face'), st = stage();
@@ -818,7 +915,7 @@
     if (!S.cv || !S.cv.isConnected) return;
     var pt = previewTimes();
     var t = pt.bound && pt.ill ? pt.t : S.tFree;
-    try { G.drawStage(S.cv, { rig: stage(), il: S.il, ill: pt.ill, t: t, view: S.view, orbit: S.orbit, focus: !S.adv }); if (!S.adv && S.view === 'free') overlayFaces(); } catch (e) { /* o status mostra o motivo */ }
+    try { G.drawStage(S.cv, { rig: stage(), il: S.il, ill: pt.ill, t: t, view: S.view, orbit: S.orbit, focus: !S.adv }); if (!S.adv && S.view === 'free') { overlayFaces(); if (S.il && S.il.preset === 'room-builder' && G.roomOutline) overlayRoom(); } } catch (e) { /* o status mostra o motivo */ }
     var nowT = Date.now();
     if (S.lastStatus && nowT - S.lastStatus < 600) return;   // o texto de status só muda a cada 0,6 s: evita o painel tremer
     S.lastStatus = nowT;
@@ -892,6 +989,7 @@
         var mr = el('div', 'il-row'); mr.style.flexWrap = 'wrap';
         [['move', '✋ Mover imagens no cubo'], ['orbit', '🔄 Girar o cubo']].forEach(function (m3) { var bt = btn(m3[1], function () { S.dragMode = m3[0]; render(); }, (S.dragMode || 'move') === m3[0] ? 'on' : '', 'il-dm-' + m3[0]); bt.setAttribute('aria-pressed', (S.dragMode || 'move') === m3[0] ? 'true' : 'false'); mr.appendChild(bt); });
         top.appendChild(mr);
+        var sb = selBar(); if (sb) top.appendChild(sb);
       }
       var hr = el('div', 'il-row'); hr.style.flexWrap = 'wrap';
       hr.appendChild(btn('↶ Desfazer', undo, null, 'il-undo')); hr.appendChild(btn('↷ Refazer', redo, null, 'il-redo'));
@@ -915,7 +1013,7 @@
     if (S.assetId) ar2.appendChild(btn(easy ? 'Tirar da face' : 'Desfazer aplicação', function () { var asset = S.assetId; H.checkpoint('il-remove'); T.removeAll(seq(), asset); S.assetId = null; H.syncClock(); H.renderAll(); S.msg = 'Ilusão removida da timeline. Ela voltou a ser rascunho.'; render(); }, null, 'il-remove'));
     S._ar2 = ar2;
     if (!easy) w.appendChild(ar2);
-    (easy ? [secEasy, secEasy3d] : [secIllusion, secTarget].concat(S.il.preset === 'room-builder' ? [secRoom] : [], [secGeometry, secParams, secCamera, secLight, secMaterial, secAnim, secQuality, secPresets])).forEach(function (f) { w.appendChild(f()); });
+    (easy ? [secCatalogo, secEasy, secEasy3d] : [secIllusion, secTarget].concat(S.il.preset === 'room-builder' ? [secRoom] : [], [secGeometry, secParams, secCamera, secLight, secMaterial, secAnim, secQuality, secPresets])).forEach(function (f) { w.appendChild(f()); });
     var al = el('label', 'il-note'), ac = el('input'); ac.type = 'checkbox'; ac.id = 'il-adv'; ac.checked = S.adv;
     ac.addEventListener('change', function () { S.adv = ac.checked; try { localStorage.setItem('lenzi-il-adv', S.adv ? '1' : '0'); } catch (e) {} render(); });
     al.appendChild(ac); al.appendChild(document.createTextNode(' Opções avançadas (para quem entende do assunto)')); w.appendChild(al);
@@ -952,29 +1050,41 @@
         w.tf.x = Math.max(-2, Math.min(2, o.tf0.x + (cr * du + sr * dv) / sc)); w.tf.y = Math.max(-2, Math.min(2, o.tf0.y + (-sr * du + cr * dv) / sc));
       } else {
         var q = R0.sprites.filter(function (z) { return z.id === o.sid; })[0], pt = G.roomFloorPoint(stage(), S.il, o.face, pp[0], pp[1], o.yf); if (!q || !pt) return;
-        var cb0 = C.cubeById(stage(), S.il.target.cube) || stage().cubes[0], hh0 = cb0.size / 2, DD = Math.max(8, S.il.params.depth), nx = o.x0 + pt[0] - o.p0[0], nz = o.z0 + pt[1] - o.p0[1];
-        if (isJoined()) { nx = Math.max(hh0 - DD, Math.min(hh0, nx)); nz = Math.max(hh0 - DD, Math.min(hh0, nz)); } else { nx = Math.max(-hh0, Math.min(hh0, nx)); nz = Math.max(-DD, Math.min(0, nz)); }
-        q.x = Math.max(-60, Math.min(60, nx)); q.z = Math.max(-600, Math.min(60, nz));
+        var cp = clampToRoom(o.x0 + pt[0] - o.p0[0], o.z0 + pt[1] - o.p0[1]); q.x = cp[0]; q.z = cp[1];
       }
       changed('il-drag');
     }
     cv.addEventListener('pointerdown', function (e) {
       if (S.view !== 'free') return;
-      var obj = null, pp = cpos(e);
-      if (!S.adv && S.dragMode !== 'orbit' && S.il.preset === 'room-builder' && G.roomPick) { try { var hit = G.roomPick(stage(), S.il, pp[0], pp[1]); if (hit) obj = startObj(hit, pp); } catch (er) { obj = null; } }
-      drag = { x: e.clientX, y: e.clientY, yaw: S.orbit.yaw, pitch: S.orbit.pitch, moved: false, obj: obj }; cv.setPointerCapture(e.pointerId);
+      var obj = null, pp = cpos(e), hit = null;
+      if (!S.adv && S.dragMode !== 'orbit' && S.il.preset === 'room-builder' && G.roomPick) { try { hit = G.roomPick(stage(), S.il, pp[0], pp[1]); if (hit && !S.tool) obj = startObj(hit, pp); } catch (er) { obj = null; hit = null; } }
+      drag = { x: e.clientX, y: e.clientY, yaw: S.orbit.yaw, pitch: S.orbit.pitch, moved: false, obj: obj, hit: hit }; cv.setPointerCapture(e.pointerId); try { cv.focus(); } catch (er2) {}
     });
     cv.addEventListener('pointermove', function (e) {
       if (drag && drag.obj) { if (Math.abs(e.clientX - drag.x) + Math.abs(e.clientY - drag.y) > 4) drag.moved = true; if (drag.moved) applyObj(drag.obj, cpos(e)); return; }
-      if (!drag) { if (!S.adv && S.view === 'free' && G.pickFace) { var h = G.pickFace.apply(null, cpos(e)); S.hover = h; var ph = null; if (S.dragMode !== 'orbit' && S.il.preset === 'room-builder' && G.roomPick) { try { var pq = cpos(e); ph = G.roomPick(stage(), S.il, pq[0], pq[1]); } catch (er) {} } cv.style.cursor = ph ? 'move' : (h ? 'pointer' : 'grab'); } return; }
+      if (!drag) { if (!S.adv && S.view === 'free' && G.pickFace) { var h = G.pickFace.apply(null, cpos(e)); S.hover = h; var ph = null; if (S.dragMode !== 'orbit' && S.il.preset === 'room-builder' && G.roomPick) { try { var pq = cpos(e); ph = G.roomPick(stage(), S.il, pq[0], pq[1]); } catch (er) {} } S.hoverId = ph ? ph.id : null; cv.style.cursor = S.tool && ph ? 'crosshair' : (ph ? 'move' : (h ? 'pointer' : 'grab')); } return; }
       if (Math.abs(e.clientX - drag.x) + Math.abs(e.clientY - drag.y) > 5) drag.moved = true;
       S.orbit.yaw = drag.yaw - (e.clientX - drag.x) * 0.4; S.orbit.pitch = Math.max(-10, Math.min(85, drag.pitch + (e.clientY - drag.y) * 0.4));
     });
-    cv.addEventListener('pointerleave', function () { S.hover = null; });
+    cv.addEventListener('pointerleave', function () { S.hover = null; S.hoverId = null; });
     cv.addEventListener('pointerup', function (e) {
       var was = drag; drag = null;
-      if (was && was.obj && was.moved) { S.msg = (was.obj.kind === 'wall' ? 'Imagem movida. ' : 'Personagem movido. ') + 'O botão ↶ Desfazer volta.'; render(); return; }
-      if (was && !was.moved && !S.adv && S.view === 'free' && G.pickFace) { var h = G.pickFace.apply(null, cpos(e)); if (h) selectFace(h.cube, h.face); }
+      if (was && was.obj && was.moved) { S.selId = was.obj.id; S.msg = (was.obj.kind === 'wall' ? 'Imagem movida. ' : 'Personagem movido. ') + 'O botão ↶ Desfazer volta.'; render(); return; }
+      if (was && !was.moved && !S.adv && S.view === 'free') {
+        if (S.tool && was.hit && applyTool(was.hit)) return;
+        if (!S.tool && was.hit && S.dragMode !== 'orbit') { S.selId = was.hit.id; S.msg = layerName(was.hit.id) + ' selecionado. Arraste para mover.'; render(); return; }
+        if (!was.hit && S.selId) { S.selId = null; render(); }
+        if (G.pickFace) { var h = G.pickFace.apply(null, cpos(e)); if (h) selectFace(h.cube, h.face); }
+      }
+    });
+    cv.tabIndex = 0;
+    cv.addEventListener('keydown', function (e) {
+      if (S.adv) return;
+      var k = e.key;
+      if ((k === 'Delete' || k === 'Backspace') && S.selId) { e.preventDefault(); e.stopPropagation(); selAction('del'); }
+      else if ((k === '+' || k === '=') && S.selId) { e.preventDefault(); e.stopPropagation(); selAction('big'); }
+      else if (k === '-' && S.selId) { e.preventDefault(); e.stopPropagation(); selAction('small'); }
+      else if (k === 'Escape') { e.stopPropagation(); S.tool = null; S.selId = null; render(); }
     });
     cv.addEventListener('wheel', function (e) { if (S.view !== 'free') return; e.preventDefault(); S.orbit.dist = Math.max(30, Math.min(400, S.orbit.dist * (e.deltaY > 0 ? 1.08 : 0.92))); }, { passive: false });
     paint();

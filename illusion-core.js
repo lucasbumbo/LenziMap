@@ -610,14 +610,14 @@
     var inL = W.left.on ? W.left.d : 0, inR = W.right.on ? W.right.d : 0, inF = W.floor.on ? W.floor.d : 0, inC = W.ceiling.on ? W.ceiling.d : 0;
     if (W.back.on) {
       if (W.back.media) quads.push({ p: [0, 0, -D], r: [0, 0, 0], s: [2 * h, 2 * h, 1], m: W.back.media, solid: true, a: 1, id: 'wall:back', tf: W.back.tf });
-      else out.push(prim('quad', [0, 0, -D], null, [2 * h, 2 * h, 1], wallCol('back', 1), { e: 0 }));
+      else { out.push(prim('quad', [0, 0, -D], null, [2 * h, 2 * h, 1], wallCol('back', 1), { e: 0 })); quads.push({ p: [0, 0, -D], r: [0, 0, 0], s: [2 * h, 2 * h, 1], m: null, solid: true, a: 0, pickOnly: true, id: 'wall:back' }); }
       out.push(prim('quad', [0, 0, -D + 0.05], null, [h * 1.2, h * 1.2, 1], shade(c2, 0.5 * Math.min(1, P.glow)), { e: 1, add: true, a: 0.35 }));
     }
     function side(k, xs, rot, flipU) {
       if (!W[k].on) return;
       var xp = xs * (h - W[k].d);
       if (W[k].media) quads.push({ p: [xp, 0, -D / 2], r: [0, rot, 0], s: [D, 2 * h, 1], m: W[k].media, solid: true, a: 1, flipU: flipU, id: 'wall:' + k, tf: W[k].tf });
-      else out.push(prim('quad', [xp, 0, -D / 2], [0, rot, 0], [D, 2 * h, 1], wallCol(k, 0.85), { e: 0 }));
+      else { out.push(prim('quad', [xp, 0, -D / 2], [0, rot, 0], [D, 2 * h, 1], wallCol(k, 0.85), { e: 0 })); quads.push({ p: [xp, 0, -D / 2], r: [0, rot, 0], s: [D, 2 * h, 1], m: null, solid: true, a: 0, pickOnly: true, id: 'wall:' + k }); }
       lines(k, function (z, gl) { out.push(prim('box', [xp - xs * th * 0.1, 0, z], null, [th * 0.35, 2 * h, th * 0.35], gl, { e: 1 })); });
     }
     side('left', -1, 90, false); side('right', 1, -90, true);
@@ -625,7 +625,7 @@
       if (!W[k].on) return;
       var yp = ys * (h - W[k].d);
       if (W[k].media) quads.push({ p: [0, yp, -D / 2], r: [rot, 0, 0], s: [2 * h, D, 1], m: W[k].media, solid: true, a: 1, flipV: flipV, id: 'wall:' + k, tf: W[k].tf });
-      else out.push(prim('quad', [0, yp, -D / 2], [rot, 0, 0], [2 * h, D, 1], wallCol(k, 0.7), { e: 0 }));
+      else { out.push(prim('quad', [0, yp, -D / 2], [rot, 0, 0], [2 * h, D, 1], wallCol(k, 0.7), { e: 0 })); quads.push({ p: [0, yp, -D / 2], r: [rot, 0, 0], s: [2 * h, D, 1], m: null, solid: true, a: 0, pickOnly: true, id: 'wall:' + k }); }
       lines(k, function (z, gl) { out.push(prim('box', [0, yp - ys * th * 0.1, z], null, [2 * h, th * 0.35, th * 0.35], gl, { e: 1 })); });
     }
     flat('floor', -1, -90, false); flat('ceiling', 1, 90, true);
@@ -652,20 +652,20 @@
     if (JOINS[R.join] && JOINS[R.join].top) { buildJoined3(il, P, t, x, out, quads); return; }
     if (W.back.on) {
       if (W.back.media) quads.push({ p: [h - D / 2, 0, h - D], r: [0, 0, 0], s: [D, 2 * h, 1], m: W.back.media, solid: true, a: 1, id: 'wall:back', tf: W.back.tf });
-      else out.push(prim('quad', [h - D / 2, 0, h - D], null, [D, 2 * h, 1], wallCol('back', 1), { e: 0 }));
+      else { out.push(prim('quad', [h - D / 2, 0, h - D], null, [D, 2 * h, 1], wallCol('back', 1), { e: 0 })); quads.push({ p: [h - D / 2, 0, h - D], r: [0, 0, 0], s: [D, 2 * h, 1], m: null, solid: true, a: 0, pickOnly: true, id: 'wall:back' }); }
       if (wire && !W.back.media) for (k = 0; k < n; k++) { var xv = h - k * sp; out.push(prim('box', [xv, 0, h - D + 0.05], null, [tt, 2 * h, tt], gl, { e: 1 })); }
       if (wire && !W.back.media) for (k = 1; k * sp < 2 * h; k++) out.push(prim('box', [h - D / 2, -h + k * sp, h - D + 0.05], null, [D, tt, tt], gl, { e: 1 }));
     }
     if (W.right.on) {
       if (W.right.media) quads.push({ p: [h - D, 0, h - D / 2], r: [0, 90, 0], s: [D, 2 * h, 1], m: W.right.media, solid: true, a: 1, id: 'wall:right', tf: W.right.tf });
-      else out.push(prim('quad', [h - D, 0, h - D / 2], [0, 90, 0], [D, 2 * h, 1], wallCol('right', 0.85), { e: 0 }));
+      else { out.push(prim('quad', [h - D, 0, h - D / 2], [0, 90, 0], [D, 2 * h, 1], wallCol('right', 0.85), { e: 0 })); quads.push({ p: [h - D, 0, h - D / 2], r: [0, 90, 0], s: [D, 2 * h, 1], m: null, solid: true, a: 0, pickOnly: true, id: 'wall:right' }); }
       if (wire && !W.right.media) for (k = 0; k < n; k++) { var zv = h - k * sp; out.push(prim('box', [h - D + 0.05, 0, zv], null, [tt, 2 * h, tt], gl, { e: 1 })); }
       if (wire && !W.right.media) for (k = 1; k * sp < 2 * h; k++) out.push(prim('box', [h - D + 0.05, -h + k * sp, h - D / 2], null, [tt, tt, D], gl, { e: 1 }));
     }
     function flat(key, y, rot, flipV, alt) {
       if (!W[key].on) return;
       if (W[key].media) quads.push({ p: [h - D / 2, y, h - D / 2], r: [rot, 0, 0], s: [D, D, 1], m: W[key].media, solid: true, a: 1, flipV: flipV, id: 'wall:' + key, tf: W[key].tf });
-      else out.push(prim('quad', [h - D / 2, y, h - D / 2], [rot, 0, 0], [D, D, 1], wallCol(key, alt), { e: 0 }));
+      else { out.push(prim('quad', [h - D / 2, y, h - D / 2], [rot, 0, 0], [D, D, 1], wallCol(key, alt), { e: 0 })); quads.push({ p: [h - D / 2, y, h - D / 2], r: [rot, 0, 0], s: [D, D, 1], m: null, solid: true, a: 0, pickOnly: true, id: 'wall:' + key }); }
       if (wire && !W[key].media) for (k = 0; k < n; k++) {
         out.push(prim('box', [h - D / 2, y, h - k * sp], null, [D, tt, tt], gl, { e: 1 }));
         out.push(prim('box', [h - k * sp, y, h - D / 2], null, [tt, tt, D], gl, { e: 1 }));
@@ -690,17 +690,17 @@
     var gl = shade(x.c1, 0.35), wire = x.wall === 'grid', tt = th * 0.35;
     if (W.back.on) {
       if (W.back.media) quads.push({ p: [c0, c0, f0], r: [0, 0, 0], s: [D, D, 1], m: W.back.media, solid: true, a: 1, id: 'wall:back', tf: W.back.tf });
-      else out.push(prim('quad', [c0, c0, f0], null, [D, D, 1], wallCol('back', 1), { e: 0 }));
+      else { out.push(prim('quad', [c0, c0, f0], null, [D, D, 1], wallCol('back', 1), { e: 0 })); quads.push({ p: [c0, c0, f0], r: [0, 0, 0], s: [D, D, 1], m: null, solid: true, a: 0, pickOnly: true, id: 'wall:back' }); }
       if (wire && !W.back.media) for (k = 0; k < n; k++) out.push(prim('box', [h - k * sp, c0, f0 + 0.05], null, [tt, D, tt], gl, { e: 1 }));
     }
     if (W.right.on) {
       if (W.right.media) quads.push({ p: [f0, c0, c0], r: [0, 90, 0], s: [D, D, 1], m: W.right.media, solid: true, a: 1, id: 'wall:right', tf: W.right.tf });
-      else out.push(prim('quad', [f0, c0, c0], [0, 90, 0], [D, D, 1], wallCol('right', 0.85), { e: 0 }));
+      else { out.push(prim('quad', [f0, c0, c0], [0, 90, 0], [D, D, 1], wallCol('right', 0.85), { e: 0 })); quads.push({ p: [f0, c0, c0], r: [0, 90, 0], s: [D, D, 1], m: null, solid: true, a: 0, pickOnly: true, id: 'wall:right' }); }
       if (wire && !W.right.media) for (k = 0; k < n; k++) out.push(prim('box', [f0 + 0.05, c0, h - k * sp], null, [tt, D, tt], gl, { e: 1 }));
     }
     if (W.floor.on) {
       if (W.floor.media) quads.push({ p: [c0, f0, c0], r: [-90, 0, 0], s: [D, D, 1], m: W.floor.media, solid: true, a: 1, id: 'wall:floor', tf: W.floor.tf });
-      else out.push(prim('quad', [c0, f0, c0], [-90, 0, 0], [D, D, 1], wallCol('floor', 0.7), { e: 0 }));
+      else { out.push(prim('quad', [c0, f0, c0], [-90, 0, 0], [D, D, 1], wallCol('floor', 0.7), { e: 0 })); quads.push({ p: [c0, f0, c0], r: [-90, 0, 0], s: [D, D, 1], m: null, solid: true, a: 0, pickOnly: true, id: 'wall:floor' }); }
       if (wire && !W.floor.media) for (k = 0; k < n; k++) {
         out.push(prim('box', [c0, f0 + 0.05, h - k * sp], null, [D, tt, tt], gl, { e: 1 }));
         out.push(prim('box', [h - k * sp, f0 + 0.05, c0], null, [tt, tt, D], gl, { e: 1 }));

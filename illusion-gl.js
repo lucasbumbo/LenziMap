@@ -109,7 +109,7 @@
   }
   var qbuf = null, qdata = new Float32Array(30);
   function drawQuads(r, VP, solid, nowMs, light, fog) {
-    var list = (r.scene.quads || []).filter(function (q) { return !!q.solid === solid; });
+    var list = (r.scene.quads || []).filter(function (q) { return !q.pickOnly && !!q.solid === solid; });
     if (!list.length) return 0;
     var eye = r.eye, items = [];
     list.forEach(function (q) {
@@ -443,7 +443,7 @@
   }
 
   // Desenha o palco inteiro num canvas 2D. opts: {rig, il, ill, t, view:'audience'|'free'|'projector', orbit:{yaw,pitch,dist}, size}
-  var lastFaces = [];
+  var lastFaces = [], lastVP = null, lastWH = [1, 1];
   function inPoly(poly, x, y) { var ins = false, i, j; for (i = 0, j = poly.length - 1; i < poly.length; j = i++) { if (((poly[i][1] > y) !== (poly[j][1] > y)) && (x < (poly[j][0] - poly[i][0]) * (y - poly[i][1]) / (poly[j][1] - poly[i][1]) + poly[i][0])) ins = !ins; } return ins; }
   // Faces do último desenho do palco, em pixels do canvas, e qual face está embaixo do ponto (x, y)
   function stageFaces() { return lastFaces; }
@@ -490,7 +490,7 @@
     il = getIl(il); if (!il || !il.room) return null;
     var f = only ? only.face : faceOf(il, x, y); if (!f) return null;
     var ray = rayOf(rig, il, f, x, y); if (!ray) return null;
-    var best = null;
+    var best = null, Ml = inv4(ray.r.local.M), oL = Ml ? C.m.pt(Ml, ray.eye) : null, pL = Ml ? C.m.pt(Ml, ray.P) : null;
     (ray.r.scene.quads || []).forEach(function (q) {
       if (only && q.id !== only.id) return;
       var Wm = C.m.mul(ray.r.local.M, C.m.trs(q.p, q.r, q.s)), Mi = inv4(Wm); if (!Mi) return;
@@ -499,9 +499,37 @@
       var t = -o[2] / d[2]; if (t < 0.999) return;
       var lx = o[0] + t * d[0], ly = o[1] + t * d[1];
       if (!only && (Math.abs(lx) > 0.5 || Math.abs(ly) > 0.5)) return;
-      if (!best || t < best.t) best = { id: q.id, q: q, t: t, face: f, uv: [q.flipU ? 0.5 - lx : lx + 0.5, q.flipV ? 0.5 + ly : 0.5 - ly] };
+      if (!best || t < best.t) best = { id: q.id, q: q, t: t, face: f, rp: oL ? [oL[0] + t * (pL[0] - oL[0]), oL[1] + t * (pL[1] - oL[1]), oL[2] + t * (pL[2] - oL[2])] : null, uv: [q.flipU ? 0.5 - lx : lx + 0.5, q.flipV ? 0.5 + ly : 0.5 - ly] };
     });
     return best;
+  }
+  // Contorno (em pixels da prévia) das camadas pedidas, projetado em cada face onde o público as enxerga. Serve para destacar o que está selecionado.
+  function roomOutline(rig, il, ids) {
+    il = getIl(il); var out = [];
+    if (!il || !il.room || !lastVP || !ids || !ids.length) return out;
+    var VP = lastVP, W = lastWH[0], H = lastWH[1], V = C.v;
+    lastFaces.forEach(function (f) {
+      if (!f.visible || f.cube !== il.target.cube || il.target.faces.indexOf(f.face) < 0) return;
+      var r; try { r = C.resolveFace(rig, il, null, null, 0, { cube: f.cube, face: f.face }); } catch (e) { return; }
+      if (!r || !r.scene) return;
+      var c = f.corners, n = V.cross(V.sub(c[1], c[0]), V.sub(c[3], c[0])), shapes = [];
+      (r.scene.quads || []).forEach(function (q) {
+        if (ids.indexOf(q.id) < 0) return;
+        var Wm = C.m.mul(r.local.M, C.m.trs(q.p, q.r, q.s)), ok = true, pts = [];
+        [[-0.5, -0.5], [0.5, -0.5], [0.5, 0.5], [-0.5, 0.5]].forEach(function (v) {
+          if (!ok) return;
+          var w = C.m.pt(Wm, [v[0], v[1], 0]), d = V.sub(w, r.eye), den = V.dot(n, d);
+          if (Math.abs(den) < 1e-9) { ok = false; return; }
+          var t = V.dot(n, V.sub(c[0], r.eye)) / den; if (t <= 0) { ok = false; return; }
+          var P = V.add(r.eye, V.mul(d, t)), cx = VP[0] * P[0] + VP[4] * P[1] + VP[8] * P[2] + VP[12], cy = VP[1] * P[0] + VP[5] * P[1] + VP[9] * P[2] + VP[13], cw = VP[3] * P[0] + VP[7] * P[1] + VP[11] * P[2] + VP[15];
+          if (cw <= 0.01) { ok = false; return; }
+          pts.push([(cx / cw * 0.5 + 0.5) * W, (1 - (cy / cw * 0.5 + 0.5)) * H]);
+        });
+        if (ok) shapes.push({ id: q.id, pts: pts });
+      });
+      if (shapes.length) out.push({ poly: f.poly, shapes: shapes });
+    });
+    return out;
   }
   // Ponto da sala (coordenadas locais do cubo) onde o raio do pixel (x, y) cruza o plano horizontal y = yPlane. Serve para arrastar personagens pelo chão.
   function roomFloorPoint(rig, il, f, x, y, yPlane) {
@@ -552,7 +580,7 @@
       eye = [cen[0] + Math.sin(ya) * Math.cos(pa) * o.dist, cen[1] + Math.sin(pa) * o.dist, cen[2] + Math.cos(ya) * Math.cos(pa) * o.dist];
     } else eye = rig.viewer.pos.slice();
     var VP = C.m.mul(C.m.perspective(fovV, W / H, 1, 3000), C.m.lookAt(eye, cen, [0, 1, 0]));
-    lastFaces = [];
+    lastFaces = []; lastVP = VP; lastWH = [W, H];
     rig.cubes.forEach(function (cube) {
       C.FACES.forEach(function (fc) {
         var fr = C.faceFrame(cube, fc), poly = [], ok = true;
@@ -606,7 +634,7 @@
   function readPixel(x, y) { var px = new Uint8Array(4); if (!gl) return null; gl.readPixels(x, cv.height - 1 - y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); return Array.prototype.slice.call(px); }
 
   root.IllusionGL = {
-    draw: draw, drawStage: drawStage, stageFaces: stageFaces, pickFace: pickFace, roomPick: roomPick, roomFloorPoint: roomFloorPoint, faceTexture: faceTexture, hasGl: function () { return !!ensureGl(); }, status: status, mediaStatus: mediaStatus,
+    draw: draw, drawStage: drawStage, stageFaces: stageFaces, pickFace: pickFace, roomPick: roomPick, roomFloorPoint: roomFloorPoint, roomOutline: roomOutline, faceTexture: faceTexture, hasGl: function () { return !!ensureGl(); }, status: status, mediaStatus: mediaStatus,
     setStatusHandler: function (fn) { onStatus = fn; }, readPixel: readPixel, sizeFor: sizeFor, _renderFace: function (r, il, ill, w, h) { if (!ensureGl()) return null; return renderFaceGL(r, getIl(il), ill, w, h); },
     _cv: function () { return cv; }, _forceLoss: function () { if (gl) { var e = gl.getExtension('WEBGL_lose_context'); if (e) e.loseContext(); } }
   };

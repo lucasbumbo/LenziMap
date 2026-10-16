@@ -191,6 +191,12 @@ Na aba **3D** agora abre direto o modo fácil:
 3. **Paredes e objetos**: marque Fundo, Parede esquerda, Parede direita, Chão e Teto, escolha cor e imagem ou GIF de cada uma, e adicione objetos (um bichinho em GIF, por exemplo).
 Depois, **Aplicar na Timeline**. Os tipos de ilusão, câmera, luz e geometria do palco ficam em **Mostrar opções avançadas** (no fim do painel). A escolha fica guardada.
 
+### 1.0.21
+
+- Interface estilo The Sims no 3D: Catálogo com miniaturas (Paredes, Pisos, Personagens). Clique numa imagem e depois numa parede ou no piso do cubo para pintar, ou no chão para colocar um personagem em pé.
+- O que você clica no cubo fica destacado (rosa); passar o mouse destaca em branco. Barra com Maior, Menor, Tirar, Imagem ao centro, Soltar. Teclas: Delete, + e -, Esc.
+- Não testado em Mac real, projetor ou cubo físico.
+
 ### 1.0.20
 - Sala de 3 faces (quina vista de cima): Topo + duas laterais viram uma sala só. O piso aparece pelo topo, as paredes do fundo pelos lados, sem teto. "Na quina (diagonal)" e a Sala do rato já montam assim. A sala de 2 faces continua na lista.
 - Mover, tamanho e girar a imagem de cada parede e do piso, separado por camada (menor que 1 repete em mosaico). Não mexe nas outras camadas.

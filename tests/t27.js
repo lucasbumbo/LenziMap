@@ -21,6 +21,7 @@ let fails=0,n=0;function assert(c,m){n++;if(c)console.log('PASS '+m);else{fails+
  // arrastar gira e não escolhe
  const y0=await p.evaluate(()=>window.IllusionUI.state.orbit.yaw), fBefore=await p.evaluate(()=>window.IllusionUI.state.il.target.faces[0]);
  const bb=await p.locator('#il-canvas').boundingBox();
+ await p.click('#il-dm-orbit');
  await p.mouse.move(bb.x+bb.width*0.5,bb.y+bb.height*0.5);await p.mouse.down();await p.mouse.move(bb.x+bb.width*0.5+80,bb.y+bb.height*0.5,{steps:6});await p.mouse.up();await p.waitForTimeout(300);
  const y1=await p.evaluate(()=>window.IllusionUI.state.orbit.yaw);
  assert(Math.abs(y1-y0)>10,'arrastar com o mouse gira o cubo ('+Math.round(y0)+' -> '+Math.round(y1)+')');
