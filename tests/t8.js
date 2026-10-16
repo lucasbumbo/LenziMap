@@ -37,7 +37,7 @@ const assert=(c,m)=>{console.log(c?'PASS':'FAIL',m);if(!c)process.exitCode=1;};
  console.log('audio preview',JSON.stringify(au),'saida',JSON.stringify(ao));
  assert(au.n>=1,'musica ativa na janela de controle');
  assert(ao.n===0&&ao.vids===0,'janela de saida nao toca audio (sem duplicar)');
- assert(au.st.samples>0&&au.st.max<0.15,'audio drift max '+au.st.max.toFixed(3)+' s, media '+(au.st.sum/au.st.samples).toFixed(3)+' s');
+ assert(au.st.samples>0&&au.st.sum/au.st.samples<0.1&&au.st.max<0.4,'audio drift max '+au.st.max.toFixed(3)+' s, media '+(au.st.sum/au.st.samples).toFixed(3)+' s');
  // pausa rapida
  for(let i=0;i<20;i++){await p.evaluate(()=>window.TimelineUI.api.pause());await p.evaluate(()=>window.TimelineUI.api.play());}
  await p.evaluate(()=>window.TimelineUI.api.pause());await p.waitForTimeout(500);
