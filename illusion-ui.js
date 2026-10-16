@@ -244,6 +244,11 @@
       }, S.sala === k ? 'on' : '', 'il-sala-' + k));
     });
     b.appendChild(rowS);
+    var ring = ['front', 'right', 'back', 'left'], ix = ring.indexOf(f0);
+    if (ix >= 0) {
+      var kn = ring[ix] + '+' + ring[(ix + 1) % 4], kp = ring[(ix + 3) % 4] + '+' + ring[ix];
+      rowS.parentNode.insertBefore(selectRow('Projetor na quina? Usar duas faces juntas', [['', 'Não, só esta face'], [kn, 'Com a face ' + C.FACE_LABEL[ring[(ix + 1) % 4]]], [kp, 'Com a face ' + C.FACE_LABEL[ring[(ix + 3) % 4]]]], function () { return R.join || ''; }, function (v) { setJoin(v); }, 'il-join'), rowS.nextSibling);
+    }
     // passo 3: profundidade
     b.appendChild(el('p', 'il-note', '3. Quanto fundo? (para a direita fica mais fundo)'));
     var P = C.PARAMS.depth;
@@ -260,11 +265,6 @@
     dn.addEventListener('keydown', function (e) { e.stopPropagation(); });
     dl.appendChild(dn); fino.appendChild(dl);
     fino.appendChild(selectRow('Cubo', st0.cubes.map(function (c) { return [c.id, c.name + ' (' + c.size + ' pol)']; }), function () { return S.il.target.cube; }, function (v) { selectFace(v, S.il.target.faces[0] || 'front'); }, 'il-cube'));
-    var ring = ['front', 'right', 'back', 'left'], ix = ring.indexOf(f0);
-    if (ix >= 0) {
-      var kn = ring[ix] + '+' + ring[(ix + 1) % 4], kp = ring[(ix + 3) % 4] + '+' + ring[ix];
-      fino.appendChild(selectRow('Sala na quina (duas faces juntas)', [['', 'Não, só esta face'], [kn, 'Com a face ' + C.FACE_LABEL[ring[(ix + 1) % 4]]], [kp, 'Com a face ' + C.FACE_LABEL[ring[(ix + 3) % 4]]]], function () { return R.join || ''; }, function (v) { setJoin(v); }, 'il-join'));
-    }
     var cur0 = S.il.target.faces[0] || 'front';
     fino.appendChild(selectRow('Tela (superfície) desta face', surfaceOptions(), function () { return cube0.faces[cur0] || ''; }, function (v) { bindSurface(cube0.id, cur0, v); }, 'il-bind-' + cur0));
     slider(fino, 'Girar o 3D (graus, esquerda/direita)', function () { return S.il.camera.yaw || 0; }, function (v) { S.il.camera.yaw = v; changed('il-cam'); }, -80, 80, 1);
@@ -707,7 +707,7 @@
     sec.textContent = ''; S.lastStatus = 0;
     var w = el('div', 'il-wrap' + (!S.adv ? ' il-kid' : ''));
     var head = el('div', 'il-row'); head.appendChild(el('h2', null, S.adv ? '3D Illusion Creator' : 'Sala 3D')); w.appendChild(head);
-    var cv = el('canvas', 'il-cv'); cv.id = 'il-canvas'; cv.width = 560; cv.height = S.adv ? 350 : 260; cv.setAttribute('role', 'img'); cv.setAttribute('aria-label', 'Prévia da ilusão 3D'); S.cv = cv; w.appendChild(cv);
+    var cv = el('canvas', 'il-cv'); cv.id = 'il-canvas'; cv.width = 560; cv.height = S.adv ? 350 : 220; cv.setAttribute('role', 'img'); cv.setAttribute('aria-label', 'Prévia da ilusão 3D'); S.cv = cv; w.appendChild(cv);
     if (!S.adv) {
       cv.style.cursor = 'grab'; cv.style.touchAction = 'none';
       var vr0 = el('div', 'il-row'); vr0.style.flexWrap = 'wrap';
