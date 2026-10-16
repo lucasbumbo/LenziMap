@@ -12,7 +12,7 @@
   var CSS = '.il-wrap{display:flex;flex-direction:column;gap:10px}.il-wrap h2{margin:0}.il-box{border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:8px;display:flex;flex-direction:column;gap:8px}' +
     '.il-box>summary{cursor:pointer;font-weight:600;font-size:13px}.il-cards{display:grid;grid-template-columns:1fr 1fr;gap:6px}.il-card{font:inherit;text-align:left;border:1px solid var(--line);background:var(--panel-2);color:var(--fg);border-radius:8px;padding:8px;cursor:pointer;display:flex;flex-direction:column;gap:2px}' +
     '.il-card b{font-size:13px}.il-card span{font-size:11px;color:var(--muted)}.il-card.on{border-color:var(--accent)}.il-card.first{grid-column:1/3}' +
-    '.il-kid .il-row button{font-size:15px;padding:10px 14px;min-height:44px}.il-kid .il-big button{font-size:18px;padding:14px 20px;min-height:54px;width:100%}.il-kid .il-note{font-size:13px}' +
+    '.il-kid .il-row button{font-size:15px;padding:10px 14px;min-height:44px}.il-kid .il-big button{font-size:18px;padding:14px 20px;min-height:54px;width:100%}.il-sticky{position:sticky;top:-18px;z-index:20;background:var(--panel);padding:20px 0 8px;display:flex;flex-direction:column;gap:8px;box-shadow:0 6px 10px -6px #000}.il-sticky .il-cv{max-height:34vh;width:auto;max-width:100%;margin:0 auto}.il-kid .il-note{font-size:15px}.il-kid .il-box{padding:14px;gap:12px;border-radius:14px}.il-kid .il-box>summary{font-size:20px;font-weight:700}.il-kid .il-row button{flex:1 1 auto;border-radius:12px}.il-kid .il-row button.on{background:var(--accent);color:#fff;border-color:var(--accent)}.il-kid .il-step{font-size:18px;font-weight:700;color:var(--fg);margin:6px 0 0}.il-kid label.field span{font-size:16px;font-weight:700;color:var(--fg)}.il-kid .il-box select{font-size:17px;padding:12px;border-radius:10px}.il-kid .il-sl{font-size:15px}.il-kid .il-sl input[type=range]{height:34px}.il-kid .il-ok{font-size:16px;font-weight:600}.il-kid #il-cores>summary,.il-kid #il-fino>summary{font-size:15px;font-weight:600;color:var(--muted)}' +
     '.il-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.il-row label{display:flex;gap:4px;align-items:center;font-size:12px}.il-grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}' +
     '.il-grid3 input,.il-box input[type=number],.il-box input[type=text],.il-box select{font:inherit;color:var(--fg);background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:5px 6px;width:100%;min-width:0}' +
     '.il-sl{display:grid;grid-template-columns:1fr 64px auto;gap:6px;align-items:center;font-size:12px}.il-sl>span{grid-column:1/4;color:var(--muted)}.il-sl input[type=range]{width:100%}' +
@@ -250,7 +250,7 @@
       rowS.parentNode.insertBefore(selectRow('Projetor na quina? Usar duas faces juntas', [['', 'Não, só esta face'], [kn, 'Com a face ' + C.FACE_LABEL[ring[(ix + 1) % 4]]], [kp, 'Com a face ' + C.FACE_LABEL[ring[(ix + 3) % 4]]]], function () { return R.join || ''; }, function (v) { setJoin(v); }, 'il-join'), rowS.nextSibling);
     }
     // passo 3: profundidade
-    b.appendChild(el('p', 'il-note', '3. Quanto fundo? (para a direita fica mais fundo)'));
+    b.appendChild(el('p', 'il-note il-step', '3. Quanto fundo? (para a direita fica mais fundo)'));
     var P = C.PARAMS.depth;
     slider(b, 'Profundidade do fundo (pol)', function () { return S.il.params.depth; }, function (v) { S.il.params.depth = v; changed('il-p:depth'); }, P.min, P.max, P.step, { kf: 'depth' });
     b.appendChild(S._ar2); S._ar2.className = 'il-row il-big'; b.appendChild(S._msg);
@@ -706,14 +706,15 @@
     var keep = sec.querySelector('details[open]') ? null : null, scroll = sec.parentNode ? sec.parentNode.scrollTop : 0;
     sec.textContent = ''; S.lastStatus = 0;
     var w = el('div', 'il-wrap' + (!S.adv ? ' il-kid' : ''));
-    var head = el('div', 'il-row'); head.appendChild(el('h2', null, S.adv ? '3D Illusion Creator' : 'Sala 3D')); w.appendChild(head);
-    var cv = el('canvas', 'il-cv'); cv.id = 'il-canvas'; cv.width = 560; cv.height = S.adv ? 350 : 220; cv.setAttribute('role', 'img'); cv.setAttribute('aria-label', 'Prévia da ilusão 3D'); S.cv = cv; w.appendChild(cv);
+    var top = el('div', S.adv ? 'il-top' : 'il-sticky'); w.appendChild(top);
+    var head = el('div', 'il-row'); head.appendChild(el('h2', null, S.adv ? '3D Illusion Creator' : 'Sala 3D')); top.appendChild(head);
+    var cv = el('canvas', 'il-cv'); cv.id = 'il-canvas'; cv.width = 560; cv.height = S.adv ? 350 : 220; cv.setAttribute('role', 'img'); cv.setAttribute('aria-label', 'Prévia da ilusão 3D'); S.cv = cv; top.appendChild(cv);
     if (!S.adv) {
       cv.style.cursor = 'grab'; cv.style.touchAction = 'none';
       var vr0 = el('div', 'il-row'); vr0.style.flexWrap = 'wrap';
       [['De frente', 0, 8], ['De canto', 35, 22], ['De cima', 20, 70]].forEach(function (a3) { vr0.appendChild(btn(a3[0], function () { S.view = 'free'; S.il.camera.view = 'free'; S.orbit.yaw = a3[1]; S.orbit.pitch = a3[2]; }, null, 'il-ang-' + a3[2])); });
-      w.appendChild(vr0);
-      w.appendChild(el('p', 'il-note', 'Clique numa face do cubo para escolher. Arraste para girar.'));
+      top.appendChild(vr0);
+      w.appendChild(el('p', 'il-note', 'Clique numa face do cubo para escolher. Arraste para girar (roda do mouse: zoom).'));
     }
     var stt = el('p', 'il-note'); stt.id = 'il-status'; stt.style.cssText = 'min-height:34px;overflow:hidden;font-variant-numeric:tabular-nums' + (S.adv ? '' : ';display:none'); w.appendChild(stt);
     var msg = el('p', 'il-note il-ok'); msg.id = 'il-msg'; msg.textContent = S.msg; msg.setAttribute('role', 'status'); S._msg = msg; if (S.adv) w.appendChild(msg);
