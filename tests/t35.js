@@ -11,9 +11,9 @@ let fails=0,n=0;function ok(c,m){n++;if(c)console.log('PASS '+m);else{fails++;co
  let s=await st();
  ok(s.rot===-45,'quina: cubo girado -45 ('+s.rot+')');
  ok(s.eye[1]===10&&s.eye[0]===0,'quina: olho na altura do cubo +2 = 10 ('+s.eye+')');
- ok(s.join==='front+right','quina: sala nas duas faces da quina ('+s.join+')');
+ ok(s.join==='top+front+right','quina: sala nas 3 faces (topo, frente, direita) ('+s.join+')');
  await p.click('#il-sala-quarto');await p.waitForTimeout(300);await p.click('#il-apply');await p.waitForTimeout(900);
- ok(await clips()===2,'colocar na quina cria um clipe para cada face ('+await clips()+')');
+ ok(await clips()===3,'colocar na quina cria um clipe para cada face ('+await clips()+')');
  await p.click('#il-pub-frente');await p.waitForTimeout(700);
  s=await st();
  ok(s.rot===0&&!s.join,'de frente: cubo reto e sala de uma face só ('+s.rot+','+s.join+')');

@@ -581,6 +581,39 @@
 
   // Barra flutuante (estilo Canva) acima da superfície selecionada
   var ftool = $('ftool');
+  // Zoom da visualização: roda do mouse com Cmd/Ctrl (ou pinça no trackpad) aproxima, roda comum arrasta quando aproximado, botões + − e 1:1
+  var vz = { z: 1, x: 0, y: 0 }, foff = { x: 0, y: 0 };
+  try { var fo = JSON.parse(localStorage.getItem('lenzi-ftool-off') || 'null'); if (fo && isFinite(fo.x) && isFinite(fo.y)) foff = { x: fo.x, y: fo.y }; } catch (e) {}
+  function applyView() {
+    var W0 = stage.clientWidth, H0 = stage.clientHeight;
+    vz.z = clamp(vz.z, 1, 6); vz.x = clamp(vz.x, W0 * (1 - vz.z), 0); vz.y = clamp(vz.y, H0 * (1 - vz.z), 0);
+    stage.style.transformOrigin = '0 0';
+    stage.style.transform = vz.z === 1 && !vz.x && !vz.y ? '' : 'translate(' + vz.x + 'px,' + vz.y + 'px) scale(' + vz.z + ')';
+    var zl = $('zoom-lbl'); if (zl) zl.textContent = Math.round(vz.z * 100) + '%';
+    try { renderOverlay(); } catch (e) {}
+  }
+  function zoomBy(f, clientX, clientY) {
+    var r = stage.getBoundingClientRect(), k = vz.z, px, py;
+    if (clientX == null) { clientX = r.left + r.width / 2; clientY = r.top + r.height / 2; }
+    px = (clientX - r.left) / k; py = (clientY - r.top) / k;
+    var z2 = clamp(vz.z * f, 1, 6);
+    vz.x += px * (vz.z - z2); vz.y += py * (vz.z - z2); vz.z = z2; applyView();
+  }
+  (function wireZoom() {
+    var wrapEl = stage.parentNode;
+    wrapEl.addEventListener('wheel', function (e) {
+      if (e.target.closest && e.target.closest('.panel,.ftool,.zoombar')) return;
+      if (e.ctrlKey || e.metaKey || e.altKey) { e.preventDefault(); zoomBy(Math.exp(-e.deltaY * (e.ctrlKey && !e.metaKey ? 0.012 : 0.004)), e.clientX, e.clientY); }
+      else if (vz.z > 1) { e.preventDefault(); vz.x -= e.deltaX; vz.y -= e.deltaY; applyView(); }
+    }, { passive: false });
+    var zb = $('zoombar');
+    if (zb) zb.addEventListener('click', function (e) {
+      var b = e.target.closest && e.target.closest('button'); if (!b) return;
+      var a = b.getAttribute('data-z');
+      if (a === 'in') zoomBy(1.4); else if (a === 'out') zoomBy(1 / 1.4); else { vz.z = 1; vz.x = 0; vz.y = 0; applyView(); }
+    });
+    window.addEventListener('resize', function () { applyView(); });
+  })();
   function placeToolbar() {
     var s = sel();
     if (!s || !state.guides || drag) { ftool.hidden = true; ftool.classList.toggle('drag', !!drag); return; }
@@ -588,18 +621,28 @@
     ftool.hidden = false;
     var P = outline(s), W = stage.clientWidth, H = stage.clientHeight, minY = Infinity, maxY = -Infinity, cx = 0, i;
     P.forEach(function (p) { if (p[1] < minY) minY = p[1]; if (p[1] > maxY) maxY = p[1]; cx += p[0] / P.length; });
+    cx = cx * vz.z + vz.x; minY = minY * vz.z + vz.y; maxY = maxY * vz.z + vz.y;
     var coarse = window.matchMedia && matchMedia('(pointer:coarse)').matches, hh = coarse ? 52 : 44, wrap = ftool.parentNode, WW = wrap.clientWidth, WH = wrap.clientHeight, ox = stage.offsetLeft, oy = stage.offsetTop;
     var y = minY + oy - hh - (state.mode === 'xform' ? 34 : 8);
     if (y < 4) y = Math.min(maxY + oy + (state.mode === 'xform' ? 16 : 10), WH - hh - 4);
     if (y < 4) y = 4;
     var half = (ftool.offsetWidth || 220) / 2;
-    ftool.style.left = clamp(cx + ox, half + 4, Math.max(half + 4, WW - half - 4)) + 'px';
-    ftool.style.top = y + 'px';
+    ftool.style.left = clamp(clamp(cx + ox, half + 4, Math.max(half + 4, WW - half - 4)) + foff.x, half + 4, Math.max(half + 4, WW - half - 4)) + 'px';
+    ftool.style.top = clamp(y + foff.y, 4, Math.max(4, WH - hh - 4)) + 'px';
     var lk = ftool.querySelector('[data-a="lock"]');
     lk.classList.toggle('on', !!s.locked); lk.title = s.locked ? 'Destravar' : 'Travar';
-    for (i = 0; i < ftool.children.length; i++) { var b = ftool.children[i]; b.style.display = (s.locked && b.getAttribute('data-a') !== 'lock' && b.getAttribute('data-a') !== 'del') ? 'none' : ''; }
+    for (i = 0; i < ftool.children.length; i++) { var b = ftool.children[i]; b.style.display = (s.locked && b.getAttribute('data-a') !== 'lock' && b.getAttribute('data-a') !== 'del' && !b.classList.contains('fgrip')) ? 'none' : ''; }
   }
-  ftool.addEventListener('pointerdown', function (e) { e.stopPropagation(); });
+  ftool.addEventListener('pointerdown', function (e) {
+    e.stopPropagation();
+    var g = e.target.closest && e.target.closest('.fgrip'); if (!g) return;
+    e.preventDefault();
+    var x0 = e.clientX, y0 = e.clientY, f0 = { x: foff.x, y: foff.y };
+    function mv(ev) { foff.x = f0.x + ev.clientX - x0; foff.y = f0.y + ev.clientY - y0; placeToolbar(); }
+    function up() { window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); try { localStorage.setItem('lenzi-ftool-off', JSON.stringify(foff)); } catch (er) {} }
+    window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up);
+  });
+  ftool.addEventListener('dblclick', function (e) { if (e.target.closest && e.target.closest('.fgrip')) { foff = { x: 0, y: 0 }; try { localStorage.removeItem('lenzi-ftool-off'); } catch (er) {} placeToolbar(); } });
   ftool.addEventListener('click', function (e) {
     var b = e.target.closest && e.target.closest('button');
     if (!b) return;
@@ -1000,8 +1043,8 @@
   // Arrastar na palco
   var drag = null, last = { t: 0, x: 0, y: 0 };
   function local(e) {
-    var r = stage.getBoundingClientRect();
-    return [e.clientX - r.left, e.clientY - r.top];
+    var r = stage.getBoundingClientRect(), k = r.width / Math.max(1, stage.clientWidth) || 1;
+    return [(e.clientX - r.left) / k, (e.clientY - r.top) / k];
   }
 
   overlay.addEventListener('contextmenu', function (e) { e.preventDefault(); });

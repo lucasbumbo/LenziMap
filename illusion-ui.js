@@ -178,7 +178,7 @@
   function stashFace() {
     if (!S.il) return;
     var ent = { il: S.il, assetId: S.assetId }, k0 = S.il.target.cube + ':';
-    if (isJoined()) { var J = C.JOINS[S.il.room.join]; S.faceIl[k0 + J.a] = ent; S.faceIl[k0 + J.b] = ent; } else S.faceIl[faceKey(S.il)] = ent;
+    if (isJoined()) { C.joinFaces(C.JOINS[S.il.room.join]).forEach(function (g) { S.faceIl[k0 + g] = ent; }); } else S.faceIl[faceKey(S.il)] = ent;
   }
   // procura na timeline uma sala já colocada nessa face (projeto reaberto, ou painel que perdeu o estado)
   function findAssetFor(cubeId, face) {
@@ -204,10 +204,10 @@
   // Sala contínua na quina: duas faces vizinhas mostram uma sala só. Troca de configuração: tira o clipe antigo, e o Aplicar cria de novo.
   function setJoin(key) {
     var st = stage(), cube = C.cubeById(st, S.il.target.cube) || st.cubes[0], f0 = curFace(), J = key ? C.JOINS[key] : null, k0 = cube.id + ':';
-    if (!isJoined()) { var oth = J ? (J.a === f0 ? J.b : J.a) : null; if (oth && S.faceIl[k0 + oth]) { dropAsset(S.faceIl[k0 + oth].assetId); delete S.faceIl[k0 + oth]; } }
-    else { var O = C.JOINS[S.il.room.join]; delete S.faceIl[k0 + O.a]; delete S.faceIl[k0 + O.b]; }
+    if (!isJoined()) { if (J) C.joinFaces(J).forEach(function (oth) { if (oth !== f0 && S.faceIl[k0 + oth]) { dropAsset(S.faceIl[k0 + oth].assetId); delete S.faceIl[k0 + oth]; } }); }
+    else { C.joinFaces(C.JOINS[S.il.room.join]).forEach(function (g) { delete S.faceIl[k0 + g]; }); }
     if (S.assetId) { dropAsset(S.assetId); S.assetId = null; }
-    if (J) { S.il.room.join = key; S.il.target.faces = [J.a, J.b]; S.msg = 'Sala contínua nas faces ' + C.FACE_LABEL[J.a] + ' e ' + C.FACE_LABEL[J.b] + '. Aperte Aplicar na Timeline.'; }
+    if (J) { S.il.room.join = key; S.il.target.faces = C.joinFaces(J); S.msg = (J.top ? 'Sala de 3 faces: ' + C.FACE_LABEL[J.a] + ', ' + C.FACE_LABEL[J.b] + ' e Topo (piso pelo topo, paredes pelos lados). ' : 'Sala contínua nas faces ' + C.FACE_LABEL[J.a] + ' e ' + C.FACE_LABEL[J.b] + '. ') + 'Aperte Colocar na face.'; }
     else { S.il.room.join = null; S.il.target.faces = [f0]; S.msg = 'Face ' + C.FACE_LABEL[f0] + ' sozinha de novo. Aperte Aplicar na Timeline.'; }
     stashFace();
     var miss = [];
@@ -275,7 +275,7 @@
   }
   function secEasy3d() {
     var f0 = curFace(), jn = isJoined() ? C.JOINS[S.il.room.join] : null, R = S.il.room, st0 = stage(), cube0 = C.cubeById(st0, S.il.target.cube) || st0.cubes[0];
-    var b = box('r3d', jn ? '2. Escolha a sala (quina: ' + C.FACE_LABEL[jn.a] + ' + ' + C.FACE_LABEL[jn.b] + ')' : '2. Escolha a sala');
+    var b = box('r3d', jn ? '2. Escolha a sala (quina: ' + C.joinFaces(jn).map(function (g) { return C.FACE_LABEL[g]; }).join(' + ') + ')' : '2. Escolha a sala');
     S.rcv = null;
     // passo 2: tipo de sala (botões grandes)
     var defs = { corredor: ['🚪 Corredor', { back: 1, left: 1, right: 1, floor: 1, ceiling: 1 }, 90], quarto: ['🛏️ Quarto', { back: 1, left: 1, right: 1, floor: 1, ceiling: 1 }, 40], caixa: ['📦 Caixa funda', { back: 1 }, 70], chao: ['⬛ Chão e fundo', { back: 1, floor: 1 }, 70] };
@@ -290,10 +290,10 @@
       }); setModelBase(); }, S.sala === k ? 'on' : '', 'il-sala-' + k));
     });
     b.appendChild(rowS);
-    var ring = ['front', 'right', 'back', 'left'], ix = ring.indexOf(f0);
+    var ring = ['front', 'right', 'back', 'left'], ix = ring.indexOf(f0 === 'top' && jn ? jn.a : f0);
     if (ix >= 0) {
       var kn = ring[ix] + '+' + ring[(ix + 1) % 4], kp = ring[(ix + 3) % 4] + '+' + ring[ix];
-      rowS.parentNode.insertBefore(selectRow('Projetor na quina? Usar duas faces juntas', [['', 'Não, só esta face'], [kn, 'Com a face ' + C.FACE_LABEL[ring[(ix + 1) % 4]]], [kp, 'Com a face ' + C.FACE_LABEL[ring[(ix + 3) % 4]]]], function () { return R.join || ''; }, function (v) { setJoin(v); }, 'il-join'), rowS.nextSibling);
+      rowS.parentNode.insertBefore(selectRow('Projetor na quina? Usar faces juntas', [['', 'Não, só esta face'], ['top+' + kn, '3 faces: Topo + ' + C.FACE_LABEL[ring[ix]] + ' + ' + C.FACE_LABEL[ring[(ix + 1) % 4]]], ['top+' + kp, '3 faces: Topo + ' + C.FACE_LABEL[ring[(ix + 3) % 4]] + ' + ' + C.FACE_LABEL[ring[ix]]], [kn, '2 faces: com a face ' + C.FACE_LABEL[ring[(ix + 1) % 4]]], [kp, '2 faces: com a face ' + C.FACE_LABEL[ring[(ix + 3) % 4]]]], function () { return R.join || ''; }, function (v) { setJoin(v); }, 'il-join'), rowS.nextSibling);
     }
     // onde o público fica: de frente ou na diagonal (quina do cubo virada para o público)
     var pubBox = el('div'); pubBox.appendChild(el('p', 'il-note il-step', 'Onde o público fica?'));
@@ -305,7 +305,7 @@
         var c = C.cubeById(s2, S.il.target.cube) || s2.cubes[0], vz = Math.max(40, s2.viewer.pos[2] || 130);
         c.rotY = quina ? -45 : 0; s2.viewer.pos = [0, c.pos[1] + 2, vz];
       }, 'il-view');
-      if (quina && fx >= 0 && !isJoined()) setJoin(ringP[fx] + '+' + ringP[(fx + 1) % 4]);
+      if (quina && fx >= 0 && !isJoined()) setJoin('top+' + ringP[fx] + '+' + ringP[(fx + 1) % 4]);
       else if (!quina && isJoined()) setJoin('');
     }
     pubRow.appendChild(btn('De frente', function () { setPublico(false); }, !isQuina ? 'on' : '', 'il-pub-frente'));
@@ -318,17 +318,18 @@
       appLibImages(function (lib) {
         var lab = libFind(lib, 'Parede - Labirinto'), pis = libFind(lib, 'Piso - Xadrez preto e branco'), rato = libFind(lib, 'Personagem - Rato animado') || libFind(lib, 'Personagem - Rato em pe');
         if (!lab || !pis || !rato) { S.msg = 'Não achei as imagens da Sala do rato na biblioteca do app.'; render(); return; }
-        if (['front', 'right', 'back', 'left'].indexOf(curFace()) < 0) selectFace(S.il.target.cube, 'front');
+        if (['front', 'right', 'back', 'left'].indexOf(curFace()) < 0 && !isJoined()) selectFace(S.il.target.cube, 'front');
         histGroup(function () {
         var ringM = ['front', 'right', 'back', 'left'], fm = ringM.indexOf(curFace());
         editStage(function (s2) { var c = C.cubeById(s2, S.il.target.cube) || s2.cubes[0]; c.rotY = -45; s2.viewer.pos = [0, c.pos[1] + 2, Math.max(40, s2.viewer.pos[2] || 130)]; }, 'il-view');
-        if (fm >= 0) setJoin(ringM[fm] + '+' + ringM[(fm + 1) % 4]);
+        if (fm >= 0) setJoin('top+' + ringM[fm] + '+' + ringM[(fm + 1) % 4]);
         var W = S.il.room.walls;
         C.ROOM_WALLS.forEach(function (w2) { W[w2].on = w2 !== 'left'; });
-        W.back.media = lab; W.right.media = lab; W.floor.media = pis; W.ceiling.media = lab;
+        W.back.media = lab; W.right.media = lab; W.floor.media = pis; W.ceiling.on = false;
         S.il.params.depth = 24; S.sala = 'quarto';
-        S.il.room.sprites = [{ id: 'rato1', name: 'Rato', x: -4, y: -2, z: -4, size: 12, media: rato, fx: '' }];
-        S.msg = 'Sala do rato montada. Quando gostar da prévia, clique em Colocar na face.';
+        var hh = (C.cubeById(stage(), S.il.target.cube) || stage().cubes[0]).size / 2, fy = C.floorY(hh, 24);
+        S.il.room.sprites = [{ id: 'rato1', name: 'Rato', x: -4, y: fy + 6, z: -4, size: 12, media: rato, fx: '' }];
+        S.msg = 'Sala do rato montada (quina com topo: piso pelo topo, paredes pelos lados). Quando gostar da prévia, clique em Colocar na face.';
         changed('il-room', true);
         }); setModelBase();
       });
@@ -374,7 +375,7 @@
     slider(fino, 'Girar o 3D (graus, esquerda/direita)', function () { return S.il.camera.yaw || 0; }, function (v) { S.il.camera.yaw = v; changed('il-cam'); }, -80, 80, 1);
     slider(fino, 'Inclinar o 3D (graus, cima/baixo)', function () { return S.il.camera.tilt || 0; }, function (v) { S.il.camera.tilt = v; changed('il-cam'); }, -60, 60, 1);
     C.ROOM_WALLS.forEach(function (k) {
-      if (jn && k === 'left') return;
+      if (jn && (k === 'left' || (jn.top && k === 'ceiling'))) return;
       var w = R.walls[k], row = el('div', 'il-row'); row.dataset.wall = k;
       var cb = el('input'); cb.type = 'checkbox'; cb.checked = w.on; cb.id = 'il-wall-' + k; cb.setAttribute('aria-label', label[k]);
       cb.addEventListener('change', function () { w.on = cb.checked; changed('il-room', true); });
@@ -384,6 +385,17 @@
       row.appendChild(col);
       var wp = mediaPicker(w.media, function (m) { w.media = m; changed('il-room', true); }, 'il-wallm-' + k); wp.style.flex = '1 1 100%'; row.appendChild(wp);
       cores.appendChild(row);
+      // transformar só a imagem desta camada (não mexe nas outras)
+      if (w.media) {
+        w.tf = w.tf || { x: 0, y: 0, s: 1, r: 0 };
+        var td = el('details', 'il-box'); td.id = 'il-tf-' + k; td.open = !!S.open['tf' + k]; td.addEventListener('toggle', function () { S.open['tf' + k] = td.open; });
+        td.appendChild(el('summary', null, 'Mover, tamanho e girar a imagem: ' + label[k]));
+        slider(td, 'Mover para os lados', function () { return w.tf.x; }, function (v) { w.tf.x = v; changed('il-tf'); }, -1, 1, 0.01, { def: 0 });
+        slider(td, 'Mover para cima ou para baixo', function () { return w.tf.y; }, function (v) { w.tf.y = v; changed('il-tf'); }, -1, 1, 0.01, { def: 0 });
+        slider(td, 'Tamanho da imagem (menor que 1 repete em mosaico)', function () { return w.tf.s; }, function (v) { w.tf.s = v; changed('il-tf'); }, 0.2, 4, 0.05, { def: 1 });
+        slider(td, 'Girar a imagem (graus)', function () { return w.tf.r; }, function (v) { w.tf.r = v; changed('il-tf'); }, -180, 180, 1, { def: 0 });
+        cores.appendChild(td);
+      }
       if (!jn && w.on && k !== 'back') slider(fino, C.WALL_LABEL[k] + ': profundidade para dentro (pol)', function () { return w.d; }, function (v) { w.d = v; changed('il-room-d'); }, 0, 14, 0.5);
     });
     // ---- camadas: cada camada é uma imagem ou GIF; profundidade vai de perto da janela até o fundo ----
@@ -402,7 +414,8 @@
       var pk = mediaPicker(q.media, function (m) { q.media = m; changed('il-room', true); }, 'il-lym-' + i); pk.style.width = '100%'; g.appendChild(pk);
       slider(g, 'Profundidade (0 = na janela, ' + Math.round(DC) + ' = no fundo)', function () { return Math.max(0, Math.min(DC, lyT(q))); }, function (v) { lyPut(q, v, lyS(q)); changed('il-room-t'); }, 0, Math.round(DC), 0.5);
       slider(g, 'Esquerda / direita', function () { return Math.max(-hC * 1.5, Math.min(hC * 1.5, lyS(q))); }, function (v) { lyPut(q, lyT(q), v); changed('il-room-s'); }, -Math.round(hC * 1.5), Math.round(hC * 1.5), 0.5);
-      slider(g, 'Altura', function () { return Math.max(-hC, Math.min(hC, q.y)); }, function (v) { q.y = v; changed('il-room-y'); }, -hC, hC, 0.5);
+      var yMin = jn && jn.top ? C.floorY(hC, DC) : -hC;
+      slider(g, 'Altura', function () { return Math.max(yMin, Math.min(hC, q.y)); }, function (v) { q.y = v; changed('il-room-y'); }, yMin, hC, 0.5);
       slider(g, 'Tamanho (pol)', function () { return q.size; }, function (v) { q.size = v; changed('il-room-sz'); }, 0.5, 40, 0.5);
       if (lyT(q) > DC + 0.5) g.appendChild(el('p', 'il-warn', 'Esta camada está atrás do fundo da sala e não aparece. Diminua a profundidade.'));
       if (!q.media) g.appendChild(el('p', 'il-warn', 'Sem imagem: escolha uma imagem ou GIF acima.'));
@@ -429,6 +442,8 @@
       cores.appendChild(rcv); S.rcv = rcv; wireRoomCanvas(rcv, R, hC);
       cores.appendChild(el('p', 'il-note', 'Arraste o fundo, as paredes e as camadas amarelas nesta vista.'));
     }
+    var ms0 = G && G.mediaStatus ? G.mediaStatus() : null;
+    if (ms0 && ms0.failed) { var wm = el('p', 'il-warn', 'Alguma imagem não carregou: ' + ms0.errors.slice(0, 2).join(' | ') + '. Escolha a imagem de novo na camada.'); wm.id = 'il-media-warn'; b.appendChild(wm); }
     b.appendChild(cores);
     b.appendChild(fino);
     return b;
@@ -845,7 +860,7 @@
     if (!S.adv && S.il.preset === 'room-builder') {
       var st0 = stage(), cu0 = C.cubeById(st0, S.il.target.cube), miss0 = [];
       S.il.target.faces.forEach(function (g) { if (cu0 && !faceBound(cu0, g)) { var kk = freeSurfaceKey(); if (kk) bindSurface(cu0.id, g, kk); else miss0.push(C.FACE_LABEL[g]); } });
-      if (miss0.length && !S.retry && makeSurface()) { S.retry = true; setTimeout(function () { S.retry = false; applyNow(); }, 350); return; }
+      if (miss0.length && !S.retry && makeSurface()) { for (var mq = 1; mq < miss0.length; mq++) makeSurface(); S.retry = true; setTimeout(function () { S.retry = false; applyNow(); }, 350); return; }
       if (miss0.length) { S.msg = 'Falta uma superfície para a face ' + miss0.join(', ') + '. Clique em + Nova superfície (no topo), arraste os 4 cantos até a face do cubo e clique em Colocar na face de novo.'; render(); return; }
     }
     if (S.quick && T.QUICK[S.il.preset]) keys = T.QUICK[S.il.preset][0].keys(S.dur);
@@ -873,6 +888,11 @@
       var vr0 = el('div', 'il-row'); vr0.style.flexWrap = 'wrap';
       [['De frente', 0, 8], ['De canto', 35, 22], ['De cima', 20, 70]].forEach(function (a3) { vr0.appendChild(btn(a3[0], function () { S.view = 'free'; S.il.camera.view = 'free'; S.orbit.yaw = a3[1]; S.orbit.pitch = a3[2]; }, null, 'il-ang-' + a3[2])); });
       top.appendChild(vr0);
+      if (S.il && S.il.preset === 'room-builder') {
+        var mr = el('div', 'il-row'); mr.style.flexWrap = 'wrap';
+        [['move', '✋ Mover imagens no cubo'], ['orbit', '🔄 Girar o cubo']].forEach(function (m3) { var bt = btn(m3[1], function () { S.dragMode = m3[0]; render(); }, (S.dragMode || 'move') === m3[0] ? 'on' : '', 'il-dm-' + m3[0]); bt.setAttribute('aria-pressed', (S.dragMode || 'move') === m3[0] ? 'true' : 'false'); mr.appendChild(bt); });
+        top.appendChild(mr);
+      }
       var hr = el('div', 'il-row'); hr.style.flexWrap = 'wrap';
       hr.appendChild(btn('↶ Desfazer', undo, null, 'il-undo')); hr.appendChild(btn('↷ Refazer', redo, null, 'il-redo'));
       if (S.il && S.il.preset === 'room-builder') hr.appendChild(btn('↺ Voltar ao modelo', backToModel, null, 'il-modelo-reset'));
@@ -908,15 +928,52 @@
     // câmera livre: arrastar gira, rolar aproxima
     var drag = null;
     function cpos(e) { var r = cv.getBoundingClientRect(); return [(e.clientX - r.left) * cv.width / Math.max(1, r.width), (e.clientY - r.top) * cv.height / Math.max(1, r.height)]; }
-    cv.addEventListener('pointerdown', function (e) { if (S.view !== 'free') return; drag = { x: e.clientX, y: e.clientY, yaw: S.orbit.yaw, pitch: S.orbit.pitch, moved: false }; cv.setPointerCapture(e.pointerId); });
+    // Mover imagens: clicar numa parede, no piso ou num personagem e arrastar. A parede/piso desliza a imagem (só ela), o personagem anda pelo chão.
+    function startObj(hit, pp) {
+      var R0 = S.il.room;
+      if (hit.id.indexOf('wall:') === 0) {
+        var k = hit.id.slice(5), w = R0.walls[k]; if (!w) return null;
+        w.tf = w.tf || { x: 0, y: 0, s: 1, r: 0 };
+        return { kind: 'wall', id: hit.id, k: k, face: hit.face, uv0: hit.uv, tf0: { x: w.tf.x, y: w.tf.y, s: w.tf.s, r: w.tf.r } };
+      }
+      if (hit.id.indexOf('sp:') === 0) {
+        var q = R0.sprites.filter(function (z) { return 'sp:' + z.id === hit.id; })[0]; if (!q) return null;
+        var yf = q.y - q.size / 2, p0 = G.roomFloorPoint(stage(), S.il, hit.face, pp[0], pp[1], yf); if (!p0) return null;
+        return { kind: 'sprite', id: hit.id, sid: q.id, face: hit.face, yf: yf, p0: p0, x0: q.x, z0: q.z };
+      }
+      return null;
+    }
+    function applyObj(o, pp) {
+      var R0 = S.il.room;
+      if (o.kind === 'wall') {
+        var h2 = G.roomPick(stage(), S.il, pp[0], pp[1], { id: o.id, face: o.face }), w = R0.walls[o.k]; if (!h2 || !w) return;
+        var du = h2.uv[0] - o.uv0[0], dv = h2.uv[1] - o.uv0[1], rr = o.tf0.r * Math.PI / 180, cr = Math.cos(rr), sr = Math.sin(rr), sc = o.tf0.s || 1;
+        w.tf = w.tf || { x: 0, y: 0, s: 1, r: 0 };
+        w.tf.x = Math.max(-2, Math.min(2, o.tf0.x + (cr * du + sr * dv) / sc)); w.tf.y = Math.max(-2, Math.min(2, o.tf0.y + (-sr * du + cr * dv) / sc));
+      } else {
+        var q = R0.sprites.filter(function (z) { return z.id === o.sid; })[0], pt = G.roomFloorPoint(stage(), S.il, o.face, pp[0], pp[1], o.yf); if (!q || !pt) return;
+        var cb0 = C.cubeById(stage(), S.il.target.cube) || stage().cubes[0], hh0 = cb0.size / 2, DD = Math.max(8, S.il.params.depth), nx = o.x0 + pt[0] - o.p0[0], nz = o.z0 + pt[1] - o.p0[1];
+        if (isJoined()) { nx = Math.max(hh0 - DD, Math.min(hh0, nx)); nz = Math.max(hh0 - DD, Math.min(hh0, nz)); } else { nx = Math.max(-hh0, Math.min(hh0, nx)); nz = Math.max(-DD, Math.min(0, nz)); }
+        q.x = Math.max(-60, Math.min(60, nx)); q.z = Math.max(-600, Math.min(60, nz));
+      }
+      changed('il-drag');
+    }
+    cv.addEventListener('pointerdown', function (e) {
+      if (S.view !== 'free') return;
+      var obj = null, pp = cpos(e);
+      if (!S.adv && S.dragMode !== 'orbit' && S.il.preset === 'room-builder' && G.roomPick) { try { var hit = G.roomPick(stage(), S.il, pp[0], pp[1]); if (hit) obj = startObj(hit, pp); } catch (er) { obj = null; } }
+      drag = { x: e.clientX, y: e.clientY, yaw: S.orbit.yaw, pitch: S.orbit.pitch, moved: false, obj: obj }; cv.setPointerCapture(e.pointerId);
+    });
     cv.addEventListener('pointermove', function (e) {
-      if (!drag) { if (!S.adv && S.view === 'free' && G.pickFace) { var h = G.pickFace.apply(null, cpos(e)); S.hover = h; cv.style.cursor = h ? 'pointer' : 'grab'; } return; }
+      if (drag && drag.obj) { if (Math.abs(e.clientX - drag.x) + Math.abs(e.clientY - drag.y) > 4) drag.moved = true; if (drag.moved) applyObj(drag.obj, cpos(e)); return; }
+      if (!drag) { if (!S.adv && S.view === 'free' && G.pickFace) { var h = G.pickFace.apply(null, cpos(e)); S.hover = h; var ph = null; if (S.dragMode !== 'orbit' && S.il.preset === 'room-builder' && G.roomPick) { try { var pq = cpos(e); ph = G.roomPick(stage(), S.il, pq[0], pq[1]); } catch (er) {} } cv.style.cursor = ph ? 'move' : (h ? 'pointer' : 'grab'); } return; }
       if (Math.abs(e.clientX - drag.x) + Math.abs(e.clientY - drag.y) > 5) drag.moved = true;
       S.orbit.yaw = drag.yaw - (e.clientX - drag.x) * 0.4; S.orbit.pitch = Math.max(-10, Math.min(85, drag.pitch + (e.clientY - drag.y) * 0.4));
     });
     cv.addEventListener('pointerleave', function () { S.hover = null; });
     cv.addEventListener('pointerup', function (e) {
       var was = drag; drag = null;
+      if (was && was.obj && was.moved) { S.msg = (was.obj.kind === 'wall' ? 'Imagem movida. ' : 'Personagem movido. ') + 'O botão ↶ Desfazer volta.'; render(); return; }
       if (was && !was.moved && !S.adv && S.view === 'free' && G.pickFace) { var h = G.pickFace.apply(null, cpos(e)); if (h) selectFace(h.cube, h.face); }
     });
     cv.addEventListener('wheel', function (e) { if (S.view !== 'free') return; e.preventDefault(); S.orbit.dist = Math.max(30, Math.min(400, S.orbit.dist * (e.deltaY > 0 ? 1.08 : 0.92))); }, { passive: false });

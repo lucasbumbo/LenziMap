@@ -111,8 +111,11 @@ ipcMain.handle('open-output', (e, id) => {
   win.loadFile('output.html');
   win.once('ready-to-show', () => {
     win.show();
-    if (process.platform === 'darwin') win.setSimpleFullScreen(true);
-    else win.setFullScreen(true);
+    if (process.platform === 'darwin') {
+      win.setSimpleFullScreen(true);
+      // cobre a barra de menus e o Dock do Mac: nível acima de tudo, em todos os espaços, ocupando a tela inteira
+      try { win.setAlwaysOnTop(true, 'screen-saver'); win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true }); win.setBounds(d.bounds); } catch (e) {}
+    } else win.setFullScreen(true);
   });
   win.webContents.on('before-input-event', (ev, input) => {
     if (input.type === 'keyDown' && input.key === 'Escape') {

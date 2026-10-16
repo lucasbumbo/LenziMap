@@ -9,7 +9,7 @@ let fails=0,n=0;function assert(c,m){n++;if(c)console.log('PASS '+m);else{fails+
  await p.click('#il-pick-front');await p.waitForTimeout(500);
  assert(await p.locator('#il-join').count()===1,'tem a opção Sala contínua na quina');
  const opts=await p.locator('#il-join option').allTextContents();
- assert(opts.length===3&&/Direita/.test(opts[1])&&/Esquerda/.test(opts[2]),'opções: não, com Direita, com Esquerda ('+opts.join(' | ')+')');
+ assert(opts.length===5&&/Direita/.test(opts[1])&&/Esquerda/.test(opts[2])&&/2 faces: com a face Direita/.test(opts[3])&&/2 faces: com a face Esquerda/.test(opts[4]),'opções: não, com Direita, com Esquerda ('+opts.join(' | ')+')');
  await p.selectOption('#il-join','front+right');await p.waitForTimeout(700);
  let st=await p.evaluate(()=>{const s=window.TimelineUI._h.tl.seq.stage,c=s.cubes[0],il=window.IllusionUI.state.il;return {faces:il.target.faces,join:il.room.join,fr:c.faces.front,rt:c.faces.right};});
  assert(st.join==='front+right'&&st.faces.join()==='front,right'&&st.fr&&st.rt&&st.fr!==st.rt,'juntar liga Frente e Direita com telas diferentes ('+JSON.stringify(st)+')');

@@ -191,6 +191,15 @@ Na aba **3D** agora abre direto o modo fácil:
 3. **Paredes e objetos**: marque Fundo, Parede esquerda, Parede direita, Chão e Teto, escolha cor e imagem ou GIF de cada uma, e adicione objetos (um bichinho em GIF, por exemplo).
 Depois, **Aplicar na Timeline**. Os tipos de ilusão, câmera, luz e geometria do palco ficam em **Mostrar opções avançadas** (no fim do painel). A escolha fica guardada.
 
+### 1.0.20
+- Sala de 3 faces (quina vista de cima): Topo + duas laterais viram uma sala só. O piso aparece pelo topo, as paredes do fundo pelos lados, sem teto. "Na quina (diagonal)" e a Sala do rato já montam assim. A sala de 2 faces continua na lista.
+- Mover, tamanho e girar a imagem de cada parede e do piso, separado por camada (menor que 1 repete em mosaico). Não mexe nas outras camadas.
+- Arrastar direto no cubo da prévia: botão "Mover imagens no cubo" (parede e piso deslizam a imagem, o personagem anda pelo chão) e "Girar o cubo".
+- Barra branca de ícones da superfície: alça ⋮⋮ para arrastar, duplo clique volta ao lugar.
+- Zoom na visualização: botões − + 1:1, Ctrl/Cmd + roda ou pinça; aproximado, a roda arrasta.
+- Janela de saída acima da barra de menus e do Dock do Mac (não testado no Mac).
+- Aviso no painel quando uma imagem da sala não carrega.
+
 ### 1.0.19
 - Desfazer e Refazer no painel 3D (botões no topo, sempre visíveis). Cada ajuste de controle vale um passo, e a Sala do rato vale um passo só.
 - Botão ↺ em cada controle deslizante: volta ao valor original.

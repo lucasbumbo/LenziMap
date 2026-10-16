@@ -25,7 +25,7 @@
 
   // Planos com mídia (paredes e objetos da Sala): textura RGBA, alpha pré-multiplicado, neblina leve
   var QVS = 'attribute vec3 aPos;attribute vec2 aUv;uniform mat4 uVP;uniform vec3 uEye;varying vec2 vUv;varying float vD;void main(){vUv=aUv;vD=length(aPos-uEye);gl_Position=uVP*vec4(aPos,1.0);}';
-  var QFS = 'precision mediump float;varying vec2 vUv;varying float vD;uniform sampler2D uTex;uniform float uA;uniform float uLight;uniform float uFog;uniform float uNear;void main(){vec4 t=texture2D(uTex,vUv);float f=1.0-exp(-max(vD-uNear,0.0)*uFog);float a=t.a*uA;vec3 c=t.rgb*uLight*(1.0-f);gl_FragColor=vec4(c*a,a);}';
+  var QFS = 'precision mediump float;varying vec2 vUv;varying float vD;uniform sampler2D uTex;uniform float uA;uniform float uLight;uniform float uFog;uniform float uNear;uniform vec4 uTf;uniform float uTfOn;void main(){vec2 uv=vUv;if(uTfOn>0.5){vec2 q=uv-0.5;float cr=cos(uTf.w),sr=sin(uTf.w);q=vec2(cr*q.x+sr*q.y,-sr*q.x+cr*q.y);q=q/uTf.z-uTf.xy;uv=fract(q+0.5);}vec4 t=texture2D(uTex,uv);float f=1.0-exp(-max(vD-uNear,0.0)*uFog);float a=t.a*uA;vec3 c=t.rgb*uLight*(1.0-f);gl_FragColor=vec4(c*a,a);}';
 
   // ---------- mídia (GIF, imagem) ----------
   // No Mac a imagem é lida pelo app (api.readImage) e vira um blob: assim o navegador não a trata como "de outra origem" e deixa
@@ -152,6 +152,8 @@
         arr[o++] = p[k][0]; arr[o++] = p[k][1]; arr[o++] = p[k][2]; arr[o++] = u; arr[o++] = v;
       }
       gl.uniform1f(qprog.u.uA, q.a);
+      var tf = q.tf, tfOn = tf && (tf.x || tf.y || tf.s !== 1 || tf.r) ? 1 : 0;
+      gl.uniform1f(qprog.u.uTfOn, tfOn); if (tfOn) gl.uniform4f(qprog.u.uTf, tf.x, tf.y, tf.s, tf.r * Math.PI / 180);
       gl.bufferData(gl.ARRAY_BUFFER, arr, gl.STREAM_DRAW);
       gl.drawArrays(gl.TRIANGLES, 0, 6); n++;
     });
@@ -445,6 +447,71 @@
   function inPoly(poly, x, y) { var ins = false, i, j; for (i = 0, j = poly.length - 1; i < poly.length; j = i++) { if (((poly[i][1] > y) !== (poly[j][1] > y)) && (x < (poly[j][0] - poly[i][0]) * (y - poly[i][1]) / (poly[j][1] - poly[i][1]) + poly[i][0])) ins = !ins; } return ins; }
   // Faces do último desenho do palco, em pixels do canvas, e qual face está embaixo do ponto (x, y)
   function stageFaces() { return lastFaces; }
+  // ---- clicar e arrastar DENTRO da sala, em cima da prévia do cubo ----
+  // Do clique na face do cubo (pixel) acha o ponto 3D da janela, lança um raio do olho do público por esse ponto e vê o que a sala tem atrás
+  // (parede, piso ou personagem). Assim o app sabe o que está embaixo do mouse sem depender do ângulo em que você olha o cubo.
+  function inv4(m) {
+    var a = m, o = new Array(16), i;
+    var s0 = a[0] * a[5] - a[4] * a[1], s1 = a[0] * a[9] - a[8] * a[1], s2 = a[0] * a[13] - a[12] * a[1], s3 = a[4] * a[9] - a[8] * a[5], s4 = a[4] * a[13] - a[12] * a[5], s5 = a[8] * a[13] - a[12] * a[9];
+    var c5 = a[10] * a[15] - a[14] * a[11], c4 = a[6] * a[15] - a[14] * a[7], c3 = a[6] * a[11] - a[10] * a[7], c2 = a[2] * a[15] - a[14] * a[3], c1 = a[2] * a[11] - a[10] * a[3], c0 = a[2] * a[7] - a[6] * a[3];
+    var det = s0 * c5 - s1 * c4 + s2 * c3 + s3 * c2 - s4 * c1 + s5 * c0; if (!det) return null; var id = 1 / det;
+    o[0] = (a[5] * c5 - a[9] * c4 + a[13] * c3) * id; o[1] = (-a[1] * c5 + a[9] * c2 - a[13] * c1) * id; o[2] = (a[1] * c4 - a[5] * c2 + a[13] * c0) * id; o[3] = (-a[1] * c3 + a[5] * c1 - a[9] * c0) * id;
+    o[4] = (-a[4] * c5 + a[8] * c4 - a[12] * c3) * id; o[5] = (a[0] * c5 - a[8] * c2 + a[12] * c1) * id; o[6] = (-a[0] * c4 + a[4] * c2 - a[12] * c0) * id; o[7] = (a[0] * c3 - a[4] * c1 + a[8] * c0) * id;
+    var d5 = a[11] * a[13] - a[9] * a[15], d4 = a[7] * a[13] - a[5] * a[15], d3 = a[7] * a[9] - a[5] * a[11], d2 = a[3] * a[13] - a[1] * a[15], d1 = a[3] * a[9] - a[1] * a[11], d0 = a[3] * a[5] - a[1] * a[7];
+    o[8] = (a[7] * s5 - a[11] * s4 + a[15] * s3) * id; o[9] = (-a[3] * s5 + a[11] * s2 - a[15] * s1) * id; o[10] = (a[3] * s4 - a[7] * s2 + a[15] * s0) * id; o[11] = (-a[3] * s3 + a[7] * s1 - a[11] * s0) * id;
+    o[12] = (-a[6] * s5 + a[10] * s4 - a[14] * s3) * id; o[13] = (a[2] * s5 - a[10] * s2 + a[14] * s1) * id; o[14] = (-a[2] * s4 + a[6] * s2 - a[14] * s0) * id; o[15] = (a[2] * s3 - a[6] * s1 + a[10] * s0) * id;
+    return o;
+  }
+  // ponto da janela (face) em coordenadas do mundo a partir do pixel (x, y) da prévia: homografia inversa do quadrilátero da face
+  function facePoint(f, x, y) {
+    var p = f.poly, x0 = p[0][0], y0 = p[0][1], x1 = p[1][0], y1 = p[1][1], x2 = p[2][0], y2 = p[2][1], x3 = p[3][0], y3 = p[3][1];
+    var dx1 = x1 - x2, dx2 = x3 - x2, dx3 = x0 - x1 + x2 - x3, dy1 = y1 - y2, dy2 = y3 - y2, dy3 = y0 - y1 + y2 - y3;
+    var den = dx1 * dy2 - dy1 * dx2, g = 0, h = 0;
+    if (Math.abs(dx3) > 1e-9 || Math.abs(dy3) > 1e-9) { if (!den) return null; g = (dx3 * dy2 - dy3 * dx2) / den; h = (dx1 * dy3 - dy1 * dx3) / den; }
+    var a = x1 - x0 + g * x1, b = x3 - x0 + h * x3, d = y1 - y0 + g * y1, e = y3 - y0 + h * y3;
+    var m11 = a - x * g, m12 = b - x * h, r1 = x - x0, m21 = d - y * g, m22 = e - y * h, r2 = y - y0, dt = m11 * m22 - m12 * m21;
+    if (Math.abs(dt) < 1e-12) return null;
+    var s = (r1 * m22 - m12 * r2) / dt, t = (m11 * r2 - r1 * m21) / dt, c = f.corners;
+    return [0, 1, 2].map(function (i) { return c[0][i] + s * (c[1][i] - c[0][i]) + t * (c[3][i] - c[0][i]); });
+  }
+  function faceOf(il, x, y) {
+    var best = null;
+    lastFaces.forEach(function (f) { if (f.visible && f.cube === il.target.cube && il.target.faces.indexOf(f.face) >= 0 && inPoly(f.poly, x, y) && (!best || f.dist < best.dist)) best = f; });
+    return best;
+  }
+  function rayOf(rig, il, f, x, y) {
+    var P = facePoint(f, x, y); if (!P) return null;
+    var r = C.resolveFace(rig, il, null, null, 0, { cube: f.cube, face: f.face });
+    if (!r || !r.cam || !r.scene) return null;
+    return { r: r, P: P, eye: r.eye };
+  }
+  // Acha a camada sob o ponto (x, y) da prévia. Devolve { id: 'wall:back' | 'sp:ID', face, uv, t } ou null. "only" fixa o alvo (usado ao arrastar).
+  function roomPick(rig, il, x, y, only) {
+    il = getIl(il); if (!il || !il.room) return null;
+    var f = only ? only.face : faceOf(il, x, y); if (!f) return null;
+    var ray = rayOf(rig, il, f, x, y); if (!ray) return null;
+    var best = null;
+    (ray.r.scene.quads || []).forEach(function (q) {
+      if (only && q.id !== only.id) return;
+      var Wm = C.m.mul(ray.r.local.M, C.m.trs(q.p, q.r, q.s)), Mi = inv4(Wm); if (!Mi) return;
+      var o = C.m.pt(Mi, ray.eye), pw = C.m.pt(Mi, ray.P), d = [pw[0] - o[0], pw[1] - o[1], pw[2] - o[2]];
+      if (Math.abs(d[2]) < 1e-9) return;
+      var t = -o[2] / d[2]; if (t < 0.999) return;
+      var lx = o[0] + t * d[0], ly = o[1] + t * d[1];
+      if (!only && (Math.abs(lx) > 0.5 || Math.abs(ly) > 0.5)) return;
+      if (!best || t < best.t) best = { id: q.id, q: q, t: t, face: f, uv: [q.flipU ? 0.5 - lx : lx + 0.5, q.flipV ? 0.5 + ly : 0.5 - ly] };
+    });
+    return best;
+  }
+  // Ponto da sala (coordenadas locais do cubo) onde o raio do pixel (x, y) cruza o plano horizontal y = yPlane. Serve para arrastar personagens pelo chão.
+  function roomFloorPoint(rig, il, f, x, y, yPlane) {
+    il = getIl(il); var ray = rayOf(rig, il, f, x, y); if (!ray) return null;
+    var Ml = inv4(ray.r.local.M); if (!Ml) return null;
+    var o = C.m.pt(Ml, ray.eye), pw = C.m.pt(Ml, ray.P), d = [pw[0] - o[0], pw[1] - o[1], pw[2] - o[2]];
+    if (Math.abs(d[1]) < 1e-6) return null;
+    var t = (yPlane - o[1]) / d[1]; if (t < 0.999) return null;
+    return [o[0] + t * d[0], o[2] + t * d[2]];
+  }
   function pickFace(x, y) { var best = null; lastFaces.forEach(function (f) { if (f.visible && inPoly(f.poly, x, y) && (!best || f.dist < best.dist)) best = f; }); return best ? { cube: best.cube, face: best.face } : null; }
   function drawStage(target, opts) {
     var W = target.width, H = target.height, tctx = target.getContext('2d'), rig = opts.rig || C.defaultStage(), il = getIl(opts.il), t = opts.t || 0, view = opts.view || 'audience', ext = opts.faceTextures || null;
@@ -495,7 +562,7 @@
           poly.push([(cx / cw * 0.5 + 0.5) * W, (1 - (cy / cw * 0.5 + 0.5)) * H]);
         });
         if (!ok) return;
-        lastFaces.push({ cube: cube.id, face: fc, poly: poly, visible: C.visibleFrom(fr, eye), dist: C.v.len(C.v.sub(fr.center, eye)) });
+        lastFaces.push({ cube: cube.id, face: fc, poly: poly, corners: fr.corners, visible: C.visibleFrom(fr, eye), dist: C.v.len(C.v.sub(fr.center, eye)) });
       });
     });
     gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LEQUAL); gl.disable(gl.CULL_FACE);
@@ -539,7 +606,7 @@
   function readPixel(x, y) { var px = new Uint8Array(4); if (!gl) return null; gl.readPixels(x, cv.height - 1 - y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); return Array.prototype.slice.call(px); }
 
   root.IllusionGL = {
-    draw: draw, drawStage: drawStage, stageFaces: stageFaces, pickFace: pickFace, faceTexture: faceTexture, hasGl: function () { return !!ensureGl(); }, status: status, mediaStatus: mediaStatus,
+    draw: draw, drawStage: drawStage, stageFaces: stageFaces, pickFace: pickFace, roomPick: roomPick, roomFloorPoint: roomFloorPoint, faceTexture: faceTexture, hasGl: function () { return !!ensureGl(); }, status: status, mediaStatus: mediaStatus,
     setStatusHandler: function (fn) { onStatus = fn; }, readPixel: readPixel, sizeFor: sizeFor, _renderFace: function (r, il, ill, w, h) { if (!ensureGl()) return null; return renderFaceGL(r, getIl(il), ill, w, h); },
     _cv: function () { return cv; }, _forceLoss: function () { if (gl) { var e = gl.getExtension('WEBGL_lose_context'); if (e) e.loseContext(); } }
   };

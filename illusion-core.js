@@ -250,12 +250,17 @@
   var WALL_LABEL = { back: 'Fundo', left: 'Parede esquerda', right: 'Parede direita', floor: 'Chão', ceiling: 'Teto' };
   var MAX_SPRITES = 12;
   // Sala contínua na quina: duas faces vizinhas (na ordem do anel frente, direita, trás, esquerda) mostram UMA sala só, vista do mesmo ponto.
-  var JOINS = { 'front+right': { a: 'front', b: 'right', ang: 0 }, 'right+back': { a: 'right', b: 'back', ang: 90 }, 'back+left': { a: 'back', b: 'left', ang: 180 }, 'left+front': { a: 'left', b: 'front', ang: 270 } };
+  var JOINS = { 'front+right': { a: 'front', b: 'right', ang: 0 }, 'right+back': { a: 'right', b: 'back', ang: 90 }, 'back+left': { a: 'back', b: 'left', ang: 180 }, 'left+front': { a: 'left', b: 'front', ang: 270 },
+    // Sala de 3 faces (quina vista de cima): o topo mostra o piso, as duas laterais mostram as paredes do fundo, sem teto. Uma câmera só.
+    'top+front+right': { a: 'front', b: 'right', ang: 0, top: true }, 'top+right+back': { a: 'right', b: 'back', ang: 90, top: true }, 'top+back+left': { a: 'back', b: 'left', ang: 180, top: true }, 'top+left+front': { a: 'left', b: 'front', ang: 270, top: true } };
+  function joinFaces(jn) { return jn ? (jn.top ? [jn.a, jn.b, 'top'] : [jn.a, jn.b]) : []; }
   function defaultRoom() {
     var w = {};
-    ROOM_WALLS.forEach(function (k) { w[k] = { on: k !== 'ceiling', d: 0, color: '#1a1d2e', media: null }; });
+    ROOM_WALLS.forEach(function (k) { w[k] = { on: k !== 'ceiling', d: 0, color: '#1a1d2e', media: null, tf: { x: 0, y: 0, s: 1, r: 0 } }; });
     return { walls: w, sprites: [], join: null };
   }
+  // Transformação só da imagem de UMA parede (mover, tamanho, girar), sem mexer nas outras camadas. s < 1 repete a imagem em mosaico.
+  function cleanTf(t) { t = t && typeof t === 'object' ? t : {}; return { x: clamp(num(t.x, 0), -2, 2), y: clamp(num(t.y, 0), -2, 2), s: clamp(num(t.s, 1), 0.1, 8), r: clamp(num(t.r, 0), -180, 180) }; }
   function cleanMedia(m) {
     if (!m || typeof m !== 'object') return null;
     var path = typeof m.path === 'string' && m.path.length <= 600 && !/[\u0000-\u001f]/.test(m.path) ? m.path : '';
@@ -271,7 +276,7 @@
     var w = r.walls && typeof r.walls === 'object' ? r.walls : {};
     ROOM_WALLS.forEach(function (k) {
       var x = w[k]; if (!x || typeof x !== 'object') return;
-      d.walls[k] = { on: x.on == null ? d.walls[k].on : !!x.on, d: clamp(num(x.d, 0), 0, 14), color: isColor(x.color) ? x.color : '#1a1d2e', media: cleanMedia(x.media) };
+      d.walls[k] = { on: x.on == null ? d.walls[k].on : !!x.on, d: clamp(num(x.d, 0), 0, 14), color: isColor(x.color) ? x.color : '#1a1d2e', media: cleanMedia(x.media), tf: cleanTf(x.tf) };
     });
     var seen = {};
     (Array.isArray(r.sprites) ? r.sprites : []).slice(0, MAX_SPRITES).forEach(function (q, i) {
@@ -604,14 +609,14 @@
     }
     var inL = W.left.on ? W.left.d : 0, inR = W.right.on ? W.right.d : 0, inF = W.floor.on ? W.floor.d : 0, inC = W.ceiling.on ? W.ceiling.d : 0;
     if (W.back.on) {
-      if (W.back.media) quads.push({ p: [0, 0, -D], r: [0, 0, 0], s: [2 * h, 2 * h, 1], m: W.back.media, solid: true, a: 1, id: 'wall:back' });
+      if (W.back.media) quads.push({ p: [0, 0, -D], r: [0, 0, 0], s: [2 * h, 2 * h, 1], m: W.back.media, solid: true, a: 1, id: 'wall:back', tf: W.back.tf });
       else out.push(prim('quad', [0, 0, -D], null, [2 * h, 2 * h, 1], wallCol('back', 1), { e: 0 }));
       out.push(prim('quad', [0, 0, -D + 0.05], null, [h * 1.2, h * 1.2, 1], shade(c2, 0.5 * Math.min(1, P.glow)), { e: 1, add: true, a: 0.35 }));
     }
     function side(k, xs, rot, flipU) {
       if (!W[k].on) return;
       var xp = xs * (h - W[k].d);
-      if (W[k].media) quads.push({ p: [xp, 0, -D / 2], r: [0, rot, 0], s: [D, 2 * h, 1], m: W[k].media, solid: true, a: 1, flipU: flipU, id: 'wall:' + k });
+      if (W[k].media) quads.push({ p: [xp, 0, -D / 2], r: [0, rot, 0], s: [D, 2 * h, 1], m: W[k].media, solid: true, a: 1, flipU: flipU, id: 'wall:' + k, tf: W[k].tf });
       else out.push(prim('quad', [xp, 0, -D / 2], [0, rot, 0], [D, 2 * h, 1], wallCol(k, 0.85), { e: 0 }));
       lines(k, function (z, gl) { out.push(prim('box', [xp - xs * th * 0.1, 0, z], null, [th * 0.35, 2 * h, th * 0.35], gl, { e: 1 })); });
     }
@@ -619,7 +624,7 @@
     function flat(k, ys, rot, flipV) {
       if (!W[k].on) return;
       var yp = ys * (h - W[k].d);
-      if (W[k].media) quads.push({ p: [0, yp, -D / 2], r: [rot, 0, 0], s: [2 * h, D, 1], m: W[k].media, solid: true, a: 1, flipV: flipV, id: 'wall:' + k });
+      if (W[k].media) quads.push({ p: [0, yp, -D / 2], r: [rot, 0, 0], s: [2 * h, D, 1], m: W[k].media, solid: true, a: 1, flipV: flipV, id: 'wall:' + k, tf: W[k].tf });
       else out.push(prim('quad', [0, yp, -D / 2], [rot, 0, 0], [2 * h, D, 1], wallCol(k, 0.7), { e: 0 }));
       lines(k, function (z, gl) { out.push(prim('box', [0, yp - ys * th * 0.1, z], null, [2 * h, th * 0.35, th * 0.35], gl, { e: 1 })); });
     }
@@ -644,21 +649,22 @@
     var R = il.room, W = R.walls, h = x.h, D = P.depth, sp = P.spacing, th = P.thick, n = Math.min(60, Math.ceil(D / sp) + 1), k;
     function wallCol(key, alt) { return shade(hex(W[key].color), alt); }
     var gl = shade(x.c1, 0.35), wire = x.wall === 'grid', tt = th * 0.35;
+    if (JOINS[R.join] && JOINS[R.join].top) { buildJoined3(il, P, t, x, out, quads); return; }
     if (W.back.on) {
-      if (W.back.media) quads.push({ p: [h - D / 2, 0, h - D], r: [0, 0, 0], s: [D, 2 * h, 1], m: W.back.media, solid: true, a: 1, id: 'wall:back' });
+      if (W.back.media) quads.push({ p: [h - D / 2, 0, h - D], r: [0, 0, 0], s: [D, 2 * h, 1], m: W.back.media, solid: true, a: 1, id: 'wall:back', tf: W.back.tf });
       else out.push(prim('quad', [h - D / 2, 0, h - D], null, [D, 2 * h, 1], wallCol('back', 1), { e: 0 }));
       if (wire && !W.back.media) for (k = 0; k < n; k++) { var xv = h - k * sp; out.push(prim('box', [xv, 0, h - D + 0.05], null, [tt, 2 * h, tt], gl, { e: 1 })); }
       if (wire && !W.back.media) for (k = 1; k * sp < 2 * h; k++) out.push(prim('box', [h - D / 2, -h + k * sp, h - D + 0.05], null, [D, tt, tt], gl, { e: 1 }));
     }
     if (W.right.on) {
-      if (W.right.media) quads.push({ p: [h - D, 0, h - D / 2], r: [0, 90, 0], s: [D, 2 * h, 1], m: W.right.media, solid: true, a: 1, id: 'wall:right' });
+      if (W.right.media) quads.push({ p: [h - D, 0, h - D / 2], r: [0, 90, 0], s: [D, 2 * h, 1], m: W.right.media, solid: true, a: 1, id: 'wall:right', tf: W.right.tf });
       else out.push(prim('quad', [h - D, 0, h - D / 2], [0, 90, 0], [D, 2 * h, 1], wallCol('right', 0.85), { e: 0 }));
       if (wire && !W.right.media) for (k = 0; k < n; k++) { var zv = h - k * sp; out.push(prim('box', [h - D + 0.05, 0, zv], null, [tt, 2 * h, tt], gl, { e: 1 })); }
       if (wire && !W.right.media) for (k = 1; k * sp < 2 * h; k++) out.push(prim('box', [h - D + 0.05, -h + k * sp, h - D / 2], null, [tt, tt, D], gl, { e: 1 }));
     }
     function flat(key, y, rot, flipV, alt) {
       if (!W[key].on) return;
-      if (W[key].media) quads.push({ p: [h - D / 2, y, h - D / 2], r: [rot, 0, 0], s: [D, D, 1], m: W[key].media, solid: true, a: 1, flipV: flipV, id: 'wall:' + key });
+      if (W[key].media) quads.push({ p: [h - D / 2, y, h - D / 2], r: [rot, 0, 0], s: [D, D, 1], m: W[key].media, solid: true, a: 1, flipV: flipV, id: 'wall:' + key, tf: W[key].tf });
       else out.push(prim('quad', [h - D / 2, y, h - D / 2], [rot, 0, 0], [D, D, 1], wallCol(key, alt), { e: 0 }));
       if (wire && !W[key].media) for (k = 0; k < n; k++) {
         out.push(prim('box', [h - D / 2, y, h - k * sp], null, [D, tt, tt], gl, { e: 1 }));
@@ -670,6 +676,39 @@
     (R.sprites || []).forEach(function (q, k) {
       if (!q.media) { out.push(prim('sphere', [q.x, q.y, q.z], null, [q.size * 0.5, q.size * 0.5, q.size * 0.5], shade(x.c2, 0.9), { e: 0.6 })); return; }
       var bob = q.fx === 'float' ? Math.sin(t * 1.6 + k) * q.size * 0.06 : 0;
+      quads.push({ p: [q.x, q.y + bob, q.z], r: [0, 45, 0], s: [q.size, q.size, 1], m: q.media, solid: false, a: 1, sprite: true, id: 'sp:' + q.id });
+    });
+  }
+
+  // Sala de 3 faces. Coordenadas locais do par (frente + direita + topo = ângulo 0): janelas em z=+h, x=+h e y=+h; a sala continua pra dentro
+  // (-x, -y, -z) até a profundidade D nos três eixos. Com D = 2h a sala é exatamente o interior do cubo. Fundo = z, Parede direita = x, Chão = y.
+  // O teto não existe nessa vista (cortado, como no The Sims). A parede esquerda também não: ela fica atrás do público.
+  function floorY(h, D) { return h - D; }
+  function buildJoined3(il, P, t, x, out, quads) {
+    var R = il.room, W = R.walls, h = x.h, D = P.depth, sp = P.spacing, th = P.thick, n = Math.min(60, Math.ceil(D / sp) + 1), k, c0 = h - D / 2, f0 = h - D;
+    function wallCol(key, alt) { return shade(hex(W[key].color), alt); }
+    var gl = shade(x.c1, 0.35), wire = x.wall === 'grid', tt = th * 0.35;
+    if (W.back.on) {
+      if (W.back.media) quads.push({ p: [c0, c0, f0], r: [0, 0, 0], s: [D, D, 1], m: W.back.media, solid: true, a: 1, id: 'wall:back', tf: W.back.tf });
+      else out.push(prim('quad', [c0, c0, f0], null, [D, D, 1], wallCol('back', 1), { e: 0 }));
+      if (wire && !W.back.media) for (k = 0; k < n; k++) out.push(prim('box', [h - k * sp, c0, f0 + 0.05], null, [tt, D, tt], gl, { e: 1 }));
+    }
+    if (W.right.on) {
+      if (W.right.media) quads.push({ p: [f0, c0, c0], r: [0, 90, 0], s: [D, D, 1], m: W.right.media, solid: true, a: 1, id: 'wall:right', tf: W.right.tf });
+      else out.push(prim('quad', [f0, c0, c0], [0, 90, 0], [D, D, 1], wallCol('right', 0.85), { e: 0 }));
+      if (wire && !W.right.media) for (k = 0; k < n; k++) out.push(prim('box', [f0 + 0.05, c0, h - k * sp], null, [tt, D, tt], gl, { e: 1 }));
+    }
+    if (W.floor.on) {
+      if (W.floor.media) quads.push({ p: [c0, f0, c0], r: [-90, 0, 0], s: [D, D, 1], m: W.floor.media, solid: true, a: 1, id: 'wall:floor', tf: W.floor.tf });
+      else out.push(prim('quad', [c0, f0, c0], [-90, 0, 0], [D, D, 1], wallCol('floor', 0.7), { e: 0 }));
+      if (wire && !W.floor.media) for (k = 0; k < n; k++) {
+        out.push(prim('box', [c0, f0 + 0.05, h - k * sp], null, [D, tt, tt], gl, { e: 1 }));
+        out.push(prim('box', [h - k * sp, f0 + 0.05, c0], null, [tt, tt, D], gl, { e: 1 }));
+      }
+    }
+    (R.sprites || []).forEach(function (q, i) {
+      if (!q.media) { out.push(prim('sphere', [q.x, q.y, q.z], null, [q.size * 0.5, q.size * 0.5, q.size * 0.5], shade(x.c2, 0.9), { e: 0.6 })); return; }
+      var bob = q.fx === 'float' ? Math.sin(t * 1.6 + i) * q.size * 0.06 : 0;
       quads.push({ p: [q.x, q.y + bob, q.z], r: [0, 45, 0], s: [q.size, q.size, 1], m: q.media, solid: false, a: 1, sprite: true, id: 'sp:' + q.id });
     });
   }
@@ -718,12 +757,14 @@
       }
     }
     // Sala contínua: as duas faces da quina olham a mesma sala do mesmo ponto (a 45 graus entre as duas faces, na distância e altura do público).
-    var jn = hit && il.preset === 'room-builder' && il.room && il.room.join ? JOINS[il.room.join] : null, joined = !!(jn && (hit.face === jn.a || hit.face === jn.b));
+    var jn = hit && il.preset === 'room-builder' && il.room && il.room.join ? JOINS[il.room.join] : null, joined = !!(jn && joinFaces(jn).indexOf(hit.face) >= 0);
     if (joined) {
       var na = FACE_AXES[jn.a].n, nb = FACE_AXES[jn.b].n, cd = rotYv([na[0] + nb[0], 0, na[2] + nb[2]], cube.rotY), cl = Math.sqrt(cd[0] * cd[0] + cd[2] * cd[2]) || 1;
       var vv2 = stage.viewer.pos, hd2 = Math.max(60, Math.min(400, Math.sqrt((vv2[0] - cube.pos[0]) * (vv2[0] - cube.pos[0]) + (vv2[2] - cube.pos[2]) * (vv2[2] - cube.pos[2]))));
       var cdr = rotYv([cd[0] / cl, 0, cd[2] / cl], -((il.camera && il.camera.yaw) || 0)), tlt = ((il.camera && il.camera.tilt) || 0) * D2R;
       eye = [cube.pos[0] + cdr[0] * hd2, vv2[1] + hd2 * Math.tan(tlt), cube.pos[2] + cdr[2] * hd2];
+      // 3 faces (topo): o público olha de cima, na diagonal. Elevação padrão 35 graus (isométrica); Inclinar soma ou tira graus.
+      if (jn.top) { var elv = Math.max(8, Math.min(80, 35 + ((il.camera && il.camera.tilt) || 0))) * D2R; eye = [cube.pos[0] + cdr[0] * hd2, cube.pos[1] + hd2 * Math.tan(elv), cube.pos[2] + cdr[2] * hd2]; }
     }
     var pr = PRESETS[il.preset], scope = joined ? 'cube' : pr.scope;
     var local = joined ? { M: m4mul(cubeFrame(cube).M, trs([0, 0, 0], [0, jn.ang, 0], [1, 1, 1])) } : (scope === 'face' ? frame : cubeFrame(cube));
@@ -739,7 +780,7 @@
     defaultStage: defaultStage, fixStage: fixStage, viewerFromMeasures: viewerFromMeasures, measuresFromViewer: measuresFromViewer, viewerAdvice: viewerAdvice, cubeById: cubeById, faceFrame: faceFrame, cubeFrame: cubeFrame, visibleFrom: visibleFrom, findFace: findFace,
     faceCamera: faceCamera, projectToFace: projectToFace,
     defaultParams: defaultParams, defaultIllusion: defaultIllusion, validate: validate, migrateIllusion: migrateIllusion, stageVersionWarning: stageVersionWarning, validateKeys: validateKeys, effective: effective,
-    buildScene: buildScene, ROOM_WALLS: ROOM_WALLS, JOINS: JOINS, WALL_LABEL: WALL_LABEL, MAX_SPRITES: MAX_SPRITES, defaultRoom: defaultRoom, resolveFace: resolveFace, hex: hex,
+    buildScene: buildScene, ROOM_WALLS: ROOM_WALLS, JOINS: JOINS, joinFaces: joinFaces, floorY: floorY, WALL_LABEL: WALL_LABEL, MAX_SPRITES: MAX_SPRITES, defaultRoom: defaultRoom, resolveFace: resolveFace, hex: hex,
     m: { ident: ident, mul: m4mul, pt: m4pt, dir: m4dir, trs: trs, rot: rotM, frustum: frustum, perspective: perspective, lookAt: lookAt },
     v: { add: add, sub: sub, mul: mul, dot: dot, cross: cross, len: len, norm: norm },
     rig: null,

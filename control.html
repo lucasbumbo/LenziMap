@@ -130,6 +130,13 @@ summary{cursor:pointer;padding:4px 0}
 .ftool button.on{background:#e4dcff;color:#5b2fe0}
 .ftool svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .ftool.drag{opacity:0;pointer-events:none}
+.fgrip{display:grid;place-items:center;width:18px;height:34px;color:#8a88a0;cursor:grab;font-size:14px;letter-spacing:-2px;user-select:none;touch-action:none}
+.fgrip:active{cursor:grabbing}
+.zoombar{position:absolute;left:14px;bottom:14px;z-index:6;display:flex;align-items:center;gap:2px;padding:3px;background:rgba(20,22,32,.88);border:1px solid var(--line);border-radius:10px;color:#e9e9f5;font-size:12px}
+.zoombar button{min-width:32px;height:30px;border:0;border-radius:7px;background:transparent;color:inherit;font-size:16px;cursor:pointer}
+.zoombar button:hover{background:rgba(255,255,255,.12)}
+.zoombar span{min-width:44px;text-align:center;font-variant-numeric:tabular-nums}
+.stage-wrap{overflow:hidden}
 
 .ptabs{flex-wrap:wrap}
 .ptabs button{flex:1 1 22%;padding-left:4px;padding-right:4px}
@@ -183,6 +190,7 @@ kbd{font:600 12px var(--font-mono);background:var(--panel-2);border:1px solid va
 
     </div>
     <div id="ftool" class="ftool" role="toolbar" aria-label="Ações da superfície" hidden>
+        <span class="fgrip" title="Arraste para mover esta barra. Duplo clique volta ao lugar." aria-label="Mover a barra">⋮⋮</span>
         <button type="button" data-a="dup" title="Duplicar" aria-label="Duplicar"><svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg></button>
         <button type="button" data-a="fx" title="Espelhar na horizontal" aria-label="Espelhar na horizontal"><svg viewBox="0 0 24 24"><path d="M12 3v18"/><path d="M8 7 3 12l5 5z"/><path d="m16 7 5 5-5 5z"/></svg></button>
         <button type="button" data-a="fy" title="Espelhar na vertical" aria-label="Espelhar na vertical"><svg viewBox="0 0 24 24"><path d="M3 12h18"/><path d="M7 8 12 3l5 5z"/><path d="m7 16 5 5 5-5z"/></svg></button>
@@ -190,6 +198,7 @@ kbd{font:600 12px var(--font-mono);background:var(--panel-2);border:1px solid va
         <button type="button" data-a="lock" title="Travar" aria-label="Travar"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></button>
         <button type="button" data-a="del" title="Apagar" aria-label="Apagar"><svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/></svg></button>
       </div>
+    <div id="zoombar" class="zoombar" role="toolbar" aria-label="Zoom da visualização"><button type="button" data-z="out" title="Afastar" aria-label="Afastar">−</button><span id="zoom-lbl">100%</span><button type="button" data-z="in" title="Aproximar" aria-label="Aproximar">+</button><button type="button" data-z="fit" title="Voltar a 100%" aria-label="Voltar a 100%">1:1</button></div>
   </main>
 
   <aside class="panel" aria-label="Controles">
