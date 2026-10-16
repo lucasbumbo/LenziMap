@@ -136,6 +136,17 @@
     var ent = { il: S.il, assetId: S.assetId }, k0 = S.il.target.cube + ':';
     if (isJoined()) { var J = C.JOINS[S.il.room.join]; S.faceIl[k0 + J.a] = ent; S.faceIl[k0 + J.b] = ent; } else S.faceIl[faceKey(S.il)] = ent;
   }
+  // procura na timeline uma sala já colocada nessa face (projeto reaberto, ou painel que perdeu o estado)
+  function findAssetFor(cubeId, face) {
+    var found = null;
+    seq().assets.forEach(function (as) {
+      if (found || !as.fx || as.fx.kind !== 'illusion' || !as.fx.illusion) return;
+      var il = as.fx.illusion;
+      if (il.preset !== 'room-builder' || !il.target || il.target.cube !== cubeId || il.target.faces.indexOf(face) < 0) return;
+      if (T.clipsOfAsset(seq(), as.id).length) found = { id: as.id, il: il };
+    });
+    return found;
+  }
   // cria uma superfície nova clicando no botão "+ Nova superfície" do app (pra criança não precisar procurar)
   function makeSurface() { var nb = document.getElementById('btn-newbox'); if (!nb) return false; nb.click(); return true; }
   function freeSurfaceKey() {
@@ -165,6 +176,7 @@
     stashFace();
     var it = S.faceIl[cube.id + ':' + f];
     if (it && it.assetId && !T.illusionOf(seq(), it.assetId)) it.assetId = null;
+    if (!it || !it.assetId) { var ex = findAssetFor(cube.id, f); if (ex) { it = { il: clone(ex.il), assetId: ex.id }; S.faceIl[cube.id + ':' + f] = it; } }
     if (it) { S.il = it.il; S.assetId = it.assetId; }
     else { newIllusion('room-builder'); S.il.camera.view = 'free'; S.il.camera.yaw = 0; S.il.camera.tilt = 0; }
     S.il.target.cube = cube.id; if (!isJoined()) S.il.target.faces = [f];
@@ -686,6 +698,11 @@
 
   function render() {
     if (!sec || !S.il) return;
+    // projeto reaberto: se a face escolhida já tem sala na timeline, o painel passa a editar essa sala em vez de criar outra
+    if (!S.adv && !S.assetId && S.il.preset === 'room-builder' && seq()) {
+      var ex1 = findAssetFor(S.il.target.cube, S.il.target.faces[0] || 'front');
+      if (ex1) { S.il = clone(ex1.il); S.assetId = ex1.id; S.curFace = S.il.target.faces[0]; stashFace(); }
+    }
     var keep = sec.querySelector('details[open]') ? null : null, scroll = sec.parentNode ? sec.parentNode.scrollTop : 0;
     sec.textContent = ''; S.lastStatus = 0;
     var w = el('div', 'il-wrap' + (!S.adv ? ' il-kid' : ''));

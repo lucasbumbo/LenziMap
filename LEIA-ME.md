@@ -191,6 +191,10 @@ Na aba **3D** agora abre direto o modo fácil:
 3. **Paredes e objetos**: marque Fundo, Parede esquerda, Parede direita, Chão e Teto, escolha cor e imagem ou GIF de cada uma, e adicione objetos (um bichinho em GIF, por exemplo).
 Depois, **Aplicar na Timeline**. Os tipos de ilusão, câmera, luz e geometria do palco ficam em **Mostrar opções avançadas** (no fim do painel). A escolha fica guardada.
 
+## 1.0.14 - não duplica sala ao reabrir o projeto
+- Se o painel perdia o estado (por exemplo ao reabrir o projeto), uma face que já tinha sala mostrava "Colocar na face" de novo, e apertar criava um clipe duplicado em cima do outro. Agora o painel reconhece a sala que já está na timeline e mostra "Tirar da face".
+- Vale também para a sala na quina (duas faces).
+
 ## 1.0.13 - corrige o quadro preto do modo avançado
 - Na Sala de paredes (opções avançadas), o quadro "Vista de cima / Vista de lado" abria todo preto até você arrastar algo. Agora o desenho aparece na hora.
 
