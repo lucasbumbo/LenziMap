@@ -28,7 +28,7 @@ let fails=0,n=0;function ok(c,m){n++;if(c)console.log('PASS '+m);else{fails++;co
  const tf1=await p.evaluate(()=>JSON.stringify(IllusionUI.state.il.room.walls.right.tf));
  ok(tf0!==tf1,'arrastar a parede desliza só a imagem dela ('+tf0+' -> '+tf1+')');
  const otherTf=await p.evaluate(()=>JSON.stringify([IllusionUI.state.il.room.walls.back.tf,IllusionUI.state.il.room.walls.floor.tf]));
- ok(otherTf===JSON.stringify([{x:0,y:0,s:1,r:0},{x:0,y:0,s:1,r:0}]),'as outras camadas não mudaram');
+ ok(otherTf===JSON.stringify([{x:0,y:0,s:1,r:0,c:[0,0,0,0,0,0,0,0]},{x:0,y:0,s:1,r:0,c:[0,0,0,0,0,0,0,0]}]),'as outras camadas não mudaram ('+otherTf+')');
  const sp0=await p.evaluate(()=>{const q=IllusionUI.state.il.room.sprites[0];return [q.x,q.z]});
  a=toPage(pts.sp);await p.mouse.move(a[0],a[1]);await p.mouse.down();await p.mouse.move(a[0]+35,a[1]+8,{steps:6});await p.mouse.up();await p.waitForTimeout(400);
  const sp1=await p.evaluate(()=>{const q=IllusionUI.state.il.room.sprites[0];return [q.x,q.z]});

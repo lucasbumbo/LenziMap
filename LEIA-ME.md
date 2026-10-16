@@ -191,6 +191,12 @@ Na aba **3D** agora abre direto o modo fácil:
 3. **Paredes e objetos**: marque Fundo, Parede esquerda, Parede direita, Chão e Teto, escolha cor e imagem ou GIF de cada uma, e adicione objetos (um bichinho em GIF, por exemplo).
 Depois, **Aplicar na Timeline**. Os tipos de ilusão, câmera, luz e geometria do palco ficam em **Mostrar opções avançadas** (no fim do painel). A escolha fica guardada.
 
+### 1.0.22
+
+- Distorcer cantos por camada: em cada parede ou piso, "Mover, tamanho, girar e distorcer a imagem" tem sliders para puxar cada canto da imagem, sem mexer nas outras camadas. Botão "Tirar a distorção".
+- A janela de saída voltou ao comportamento da 1.0.19 no Mac (a mudança da 1.0.20 para cobrir a barra de menus foi desfeita, pois podia atrapalhar o minimizar do app).
+- Não testado em Mac real, projetor ou cubo físico.
+
 ### 1.0.21
 
 - Interface estilo The Sims no 3D: Catálogo com miniaturas (Paredes, Pisos, Personagens). Clique numa imagem e depois numa parede ou no piso do cubo para pintar, ou no chão para colocar um personagem em pé.

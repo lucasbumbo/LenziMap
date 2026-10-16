@@ -25,7 +25,7 @@
 
   // Planos com mídia (paredes e objetos da Sala): textura RGBA, alpha pré-multiplicado, neblina leve
   var QVS = 'attribute vec3 aPos;attribute vec2 aUv;uniform mat4 uVP;uniform vec3 uEye;varying vec2 vUv;varying float vD;void main(){vUv=aUv;vD=length(aPos-uEye);gl_Position=uVP*vec4(aPos,1.0);}';
-  var QFS = 'precision mediump float;varying vec2 vUv;varying float vD;uniform sampler2D uTex;uniform float uA;uniform float uLight;uniform float uFog;uniform float uNear;uniform vec4 uTf;uniform float uTfOn;void main(){vec2 uv=vUv;if(uTfOn>0.5){vec2 q=uv-0.5;float cr=cos(uTf.w),sr=sin(uTf.w);q=vec2(cr*q.x+sr*q.y,-sr*q.x+cr*q.y);q=q/uTf.z-uTf.xy;uv=fract(q+0.5);}vec4 t=texture2D(uTex,uv);float f=1.0-exp(-max(vD-uNear,0.0)*uFog);float a=t.a*uA;vec3 c=t.rgb*uLight*(1.0-f);gl_FragColor=vec4(c*a,a);}';
+  var QFS = 'precision mediump float;varying vec2 vUv;varying float vD;uniform sampler2D uTex;uniform float uA;uniform float uLight;uniform float uFog;uniform float uNear;uniform vec4 uTf;uniform float uTfOn;uniform float uWarpOn;uniform mat3 uH;void main(){vec2 uv=vUv;float wa=1.0;if(uWarpOn>0.5){vec3 h=uH*vec3(uv,1.0);uv=h.xy/h.z;if(uv.x<0.0||uv.x>1.0||uv.y<0.0||uv.y>1.0)wa=0.0;uv=clamp(uv,0.0,1.0);}if(uTfOn>0.5){vec2 q=uv-0.5;float cr=cos(uTf.w),sr=sin(uTf.w);q=vec2(cr*q.x+sr*q.y,-sr*q.x+cr*q.y);q=q/uTf.z-uTf.xy;uv=fract(q+0.5);}vec4 t=texture2D(uTex,uv);float f=1.0-exp(-max(vD-uNear,0.0)*uFog);float a=t.a*uA*wa;vec3 c=t.rgb*uLight*(1.0-f);gl_FragColor=vec4(c*a,a);}';
 
   // ---------- mídia (GIF, imagem) ----------
   // No Mac a imagem é lida pelo app (api.readImage) e vira um blob: assim o navegador não a trata como "de outra origem" e deixa
@@ -153,6 +153,7 @@
       }
       gl.uniform1f(qprog.u.uA, q.a);
       var tf = q.tf, tfOn = tf && (tf.x || tf.y || tf.s !== 1 || tf.r) ? 1 : 0;
+      var wp = warpH(tf && tf.c); gl.uniform1f(qprog.u.uWarpOn, wp ? 1 : 0); if (wp) gl.uniformMatrix3fv(qprog.u.uH, false, wp);
       gl.uniform1f(qprog.u.uTfOn, tfOn); if (tfOn) gl.uniform4f(qprog.u.uTf, tf.x, tf.y, tf.s, tf.r * Math.PI / 180);
       gl.bufferData(gl.ARRAY_BUFFER, arr, gl.STREAM_DRAW);
       gl.drawArrays(gl.TRIANGLES, 0, 6); n++;
@@ -450,6 +451,24 @@
   // ---- clicar e arrastar DENTRO da sala, em cima da prévia do cubo ----
   // Do clique na face do cubo (pixel) acha o ponto 3D da janela, lança um raio do olho do público por esse ponto e vê o que a sala tem atrás
   // (parede, piso ou personagem). Assim o app sabe o que está embaixo do mouse sem depender do ângulo em que você olha o cubo.
+  // distorção de cantos: c = [dx,dy] x4 (cantos 0,0 / 1,0 / 1,1 / 0,1 do uv). Devolve mat3 (coluna) que leva o uv da tela ao uv da imagem.
+  function warpH(c) {
+    if (!c || c.length !== 8) return null; var any = false; for (var i = 0; i < 8; i++) if (c[i]) any = true; if (!any) return null;
+    var B = [[0, 0], [1, 0], [1, 1], [0, 1]], P = B.map(function (b, i) { return [b[0] + c[i * 2], b[1] + c[i * 2 + 1]]; });
+    // homografia unitário -> P (Heckbert)
+    var x0 = P[0][0], y0 = P[0][1], x1 = P[1][0], y1 = P[1][1], x2 = P[2][0], y2 = P[2][1], x3 = P[3][0], y3 = P[3][1];
+    var dx1 = x1 - x2, dx2 = x3 - x2, dx3 = x0 - x1 + x2 - x3, dy1 = y1 - y2, dy2 = y3 - y2, dy3 = y0 - y1 + y2 - y3, g, h;
+    var den = dx1 * dy2 - dx2 * dy1; if (Math.abs(den) < 1e-9) return null;
+    g = (dx3 * dy2 - dx2 * dy3) / den; h = (dx1 * dy3 - dx3 * dy1) / den;
+    var a = x1 - x0 + g * x1, b = x3 - x0 + h * x3, cc = x0, d = y1 - y0 + g * y1, e = y3 - y0 + h * y3, f = y0;
+    var m = [a, b, cc, d, e, f, g, h, 1]; // linhas
+    // inversa (cofatores)
+    var A = m[0], Bq = m[1], C = m[2], D = m[3], E = m[4], F = m[5], G = m[6], H = m[7], I = m[8];
+    var det = A * (E * I - F * H) - Bq * (D * I - F * G) + C * (D * H - E * G); if (Math.abs(det) < 1e-9) return null;
+    var inv = [(E * I - F * H), (C * H - Bq * I), (Bq * F - C * E), (F * G - D * I), (A * I - C * G), (C * D - A * F), (D * H - E * G), (Bq * G - A * H), (A * E - Bq * D)];
+    // para coluna-maior: transpõe
+    return new Float32Array([inv[0], inv[3], inv[6], inv[1], inv[4], inv[7], inv[2], inv[5], inv[8]]);
+  }
   function inv4(m) {
     var a = m, o = new Array(16), i;
     var s0 = a[0] * a[5] - a[4] * a[1], s1 = a[0] * a[9] - a[8] * a[1], s2 = a[0] * a[13] - a[12] * a[1], s3 = a[4] * a[9] - a[8] * a[5], s4 = a[4] * a[13] - a[12] * a[5], s5 = a[8] * a[13] - a[12] * a[9];

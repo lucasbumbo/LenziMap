@@ -256,11 +256,12 @@
   function joinFaces(jn) { return jn ? (jn.top ? [jn.a, jn.b, 'top'] : [jn.a, jn.b]) : []; }
   function defaultRoom() {
     var w = {};
-    ROOM_WALLS.forEach(function (k) { w[k] = { on: k !== 'ceiling', d: 0, color: '#1a1d2e', media: null, tf: { x: 0, y: 0, s: 1, r: 0 } }; });
+    ROOM_WALLS.forEach(function (k) { w[k] = { on: k !== 'ceiling', d: 0, color: '#1a1d2e', media: null, tf: { x: 0, y: 0, s: 1, r: 0, c: [0, 0, 0, 0, 0, 0, 0, 0] } }; });
     return { walls: w, sprites: [], join: null };
   }
   // Transformação só da imagem de UMA parede (mover, tamanho, girar), sem mexer nas outras camadas. s < 1 repete a imagem em mosaico.
-  function cleanTf(t) { t = t && typeof t === 'object' ? t : {}; return { x: clamp(num(t.x, 0), -2, 2), y: clamp(num(t.y, 0), -2, 2), s: clamp(num(t.s, 1), 0.1, 8), r: clamp(num(t.r, 0), -180, 180) }; }
+  function cleanTf(t) { t = t && typeof t === 'object' ? t : {}; return { x: clamp(num(t.x, 0), -2, 2), y: clamp(num(t.y, 0), -2, 2), s: clamp(num(t.s, 1), 0.1, 8), r: clamp(num(t.r, 0), -180, 180), c: cleanC(t.c) }; }
+  function cleanC(c) { var o = []; for (var i = 0; i < 8; i++) o.push(clamp(num(c && c[i], 0), -0.9, 0.9)); return o; }
   function cleanMedia(m) {
     if (!m || typeof m !== 'object') return null;
     var path = typeof m.path === 'string' && m.path.length <= 600 && !/[\u0000-\u001f]/.test(m.path) ? m.path : '';

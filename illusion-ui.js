@@ -484,13 +484,20 @@
       cores.appendChild(row);
       // transformar só a imagem desta camada (não mexe nas outras)
       if (w.media) {
-        w.tf = w.tf || { x: 0, y: 0, s: 1, r: 0 };
+        w.tf = w.tf || { x: 0, y: 0, s: 1, r: 0 }; if (!w.tf.c) w.tf.c = [0, 0, 0, 0, 0, 0, 0, 0];
         var td = el('details', 'il-box'); td.id = 'il-tf-' + k; td.open = !!S.open['tf' + k]; td.addEventListener('toggle', function () { S.open['tf' + k] = td.open; });
-        td.appendChild(el('summary', null, 'Mover, tamanho e girar a imagem: ' + label[k]));
+        td.appendChild(el('summary', null, 'Mover, tamanho, girar e distorcer a imagem: ' + label[k]));
         slider(td, 'Mover para os lados', function () { return w.tf.x; }, function (v) { w.tf.x = v; changed('il-tf'); }, -1, 1, 0.01, { def: 0 });
         slider(td, 'Mover para cima ou para baixo', function () { return w.tf.y; }, function (v) { w.tf.y = v; changed('il-tf'); }, -1, 1, 0.01, { def: 0 });
         slider(td, 'Tamanho da imagem (menor que 1 repete em mosaico)', function () { return w.tf.s; }, function (v) { w.tf.s = v; changed('il-tf'); }, 0.2, 4, 0.05, { def: 1 });
         slider(td, 'Girar a imagem (graus)', function () { return w.tf.r; }, function (v) { w.tf.r = v; changed('il-tf'); }, -180, 180, 1, { def: 0 });
+        td.appendChild(el('p', 'il-note il-step', 'Distorcer: puxe cada canto da imagem'));
+        var cn = ['canto de cima à esquerda', 'canto de cima à direita', 'canto de baixo à direita', 'canto de baixo à esquerda'];
+        cn.forEach(function (nm, ci) {
+          slider(td, 'Distorcer ' + nm + ': lados', function () { return w.tf.c[ci * 2]; }, function (v) { w.tf.c[ci * 2] = v; changed('il-tf'); }, -0.6, 0.6, 0.01, { def: 0 });
+          slider(td, 'Distorcer ' + nm + ': cima ou baixo', function () { return w.tf.c[ci * 2 + 1]; }, function (v) { w.tf.c[ci * 2 + 1] = v; changed('il-tf'); }, -0.6, 0.6, 0.01, { def: 0 });
+        });
+        td.appendChild(btn('Tirar a distorção', function () { w.tf.c = [0, 0, 0, 0, 0, 0, 0, 0]; changed('il-tf', true); }, null, 'il-tf-c0-' + k));
         cores.appendChild(td);
       }
       if (!jn && w.on && k !== 'back') slider(fino, C.WALL_LABEL[k] + ': profundidade para dentro (pol)', function () { return w.d; }, function (v) { w.d = v; changed('il-room-d'); }, 0, 14, 0.5);
@@ -1031,7 +1038,7 @@
       var R0 = S.il.room;
       if (hit.id.indexOf('wall:') === 0) {
         var k = hit.id.slice(5), w = R0.walls[k]; if (!w) return null;
-        w.tf = w.tf || { x: 0, y: 0, s: 1, r: 0 };
+        w.tf = w.tf || { x: 0, y: 0, s: 1, r: 0 }; if (!w.tf.c) w.tf.c = [0, 0, 0, 0, 0, 0, 0, 0];
         return { kind: 'wall', id: hit.id, k: k, face: hit.face, uv0: hit.uv, tf0: { x: w.tf.x, y: w.tf.y, s: w.tf.s, r: w.tf.r } };
       }
       if (hit.id.indexOf('sp:') === 0) {
@@ -1046,7 +1053,7 @@
       if (o.kind === 'wall') {
         var h2 = G.roomPick(stage(), S.il, pp[0], pp[1], { id: o.id, face: o.face }), w = R0.walls[o.k]; if (!h2 || !w) return;
         var du = h2.uv[0] - o.uv0[0], dv = h2.uv[1] - o.uv0[1], rr = o.tf0.r * Math.PI / 180, cr = Math.cos(rr), sr = Math.sin(rr), sc = o.tf0.s || 1;
-        w.tf = w.tf || { x: 0, y: 0, s: 1, r: 0 };
+        w.tf = w.tf || { x: 0, y: 0, s: 1, r: 0 }; if (!w.tf.c) w.tf.c = [0, 0, 0, 0, 0, 0, 0, 0];
         w.tf.x = Math.max(-2, Math.min(2, o.tf0.x + (cr * du + sr * dv) / sc)); w.tf.y = Math.max(-2, Math.min(2, o.tf0.y + (-sr * du + cr * dv) / sc));
       } else {
         var q = R0.sprites.filter(function (z) { return z.id === o.sid; })[0], pt = G.roomFloorPoint(stage(), S.il, o.face, pp[0], pp[1], o.yf); if (!q || !pt) return;
