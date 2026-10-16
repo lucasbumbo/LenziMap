@@ -249,6 +249,60 @@
       var kn = ring[ix] + '+' + ring[(ix + 1) % 4], kp = ring[(ix + 3) % 4] + '+' + ring[ix];
       rowS.parentNode.insertBefore(selectRow('Projetor na quina? Usar duas faces juntas', [['', 'Não, só esta face'], [kn, 'Com a face ' + C.FACE_LABEL[ring[(ix + 1) % 4]]], [kp, 'Com a face ' + C.FACE_LABEL[ring[(ix + 3) % 4]]]], function () { return R.join || ''; }, function (v) { setJoin(v); }, 'il-join'), rowS.nextSibling);
     }
+    // onde o público fica: de frente ou na diagonal (quina do cubo virada para o público)
+    var pubBox = el('div'); pubBox.appendChild(el('p', 'il-note il-step', 'Onde o público fica?'));
+    var pubRow = el('div', 'il-row'), isQuina = Math.abs((cube0.rotY || 0) + 45) < 1;
+    function setPublico(quina) {
+      var ringP = ['front', 'right', 'back', 'left'], fx = ringP.indexOf(curFace());
+      editStage(function (s2) {
+        var c = C.cubeById(s2, S.il.target.cube) || s2.cubes[0], vz = Math.max(40, s2.viewer.pos[2] || 130);
+        c.rotY = quina ? -45 : 0; s2.viewer.pos = [0, c.pos[1] + 2, vz];
+      }, 'il-view');
+      if (quina && fx >= 0 && !isJoined()) setJoin(ringP[fx] + '+' + ringP[(fx + 1) % 4]);
+      else if (!quina && isJoined()) setJoin('');
+    }
+    pubRow.appendChild(btn('De frente', function () { setPublico(false); }, !isQuina ? 'on' : '', 'il-pub-frente'));
+    pubRow.appendChild(btn('Na quina (diagonal)', function () { setPublico(true); }, isQuina ? 'on' : '', 'il-pub-quina'));
+    pubBox.appendChild(pubRow); rowS.parentNode.insertBefore(pubBox, rowS.nextSibling);
+    // modelo pronto + personagens (imagens que vêm com o app)
+    var modBox = el('div'); modBox.appendChild(el('p', 'il-note il-step', 'Modelo pronto'));
+    var modRow = el('div', 'il-row');
+    modRow.appendChild(btn('🐭 Sala do rato', function () {
+      appLibImages(function (lib) {
+        var lab = libFind(lib, 'Parede - Labirinto'), pis = libFind(lib, 'Piso - Xadrez preto e branco'), teto = libFind(lib, 'Teto - Ondas'), rato = libFind(lib, 'Personagem - Rato em pe');
+        if (!lab || !pis || !teto || !rato) { S.msg = 'Não achei as imagens da Sala do rato na biblioteca do app.'; render(); return; }
+        var ringM = ['front', 'right', 'back', 'left'], fm = ringM.indexOf(curFace());
+        editStage(function (s2) { var c = C.cubeById(s2, S.il.target.cube) || s2.cubes[0]; c.rotY = -45; s2.viewer.pos = [0, c.pos[1] + 2, Math.max(40, s2.viewer.pos[2] || 130)]; }, 'il-view');
+        if (fm >= 0) setJoin(ringM[fm] + '+' + ringM[(fm + 1) % 4]);
+        var W = S.il.room.walls;
+        C.ROOM_WALLS.forEach(function (w2) { W[w2].on = w2 !== 'left'; });
+        W.back.media = lab; W.right.media = lab; W.floor.media = pis; W.ceiling.media = teto;
+        S.il.params.depth = 24; S.sala = 'quarto';
+        S.il.room.sprites = [{ id: 'rato1', name: 'Rato', x: -4, y: -2, z: -4, size: 12, media: rato, fx: '' }];
+        S.msg = 'Sala do rato montada. Quando gostar da prévia, clique em Colocar na face.';
+        changed('il-room', true);
+      });
+    }, null, 'il-modelo-rato'));
+    modBox.appendChild(modRow);
+    var chRow = el('div', 'il-row'); chRow.appendChild(el('span', 'il-note', 'Personagem na frente da parede:'));
+    var chSel = el('select'); chSel.id = 'il-personagem'; chSel.style.flex = '1'; chSel.setAttribute('aria-label', 'Adicionar personagem');
+    var c0 = el('option', null, 'escolher…'); c0.value = ''; chSel.appendChild(c0);
+    var chLib = [];
+    appLibImages(function (lib) {
+      chLib = lib.filter(function (m) { return /^Personagem - /.test(m.name); });
+      chLib.forEach(function (m, i) { var o = el('option', null, m.name.replace(/^Personagem - /, '').replace(/\.[^.]+$/, '')); o.value = i; chSel.appendChild(o); });
+    });
+    chSel.addEventListener('change', function () {
+      var m = chLib[+chSel.value]; if (!m) return;
+      if (R.sprites.length >= C.MAX_SPRITES) { S.msg = 'Máximo de ' + C.MAX_SPRITES + ' objetos por sala.'; render(); return; }
+      var h0 = cube0.size / 2;
+      R.sprites.push({ id: 'sp' + Math.random().toString(36).slice(2, 7), name: m.name.replace(/^Personagem - /, '').replace(/\.[^.]+$/, '').slice(0, 30), x: 0, y: -h0 * 0.2, z: -Math.max(4, S.il.params.depth * 0.2), size: Math.max(2, h0 * 1.5), media: m, fx: '' });
+      changed('il-room', true);
+    });
+    chRow.appendChild(chSel);
+    if (R.sprites.length) chRow.appendChild(btn('Tirar personagens', function () { R.sprites.length = 0; changed('il-room', true); }, null, 'il-personagem-del'));
+    modBox.appendChild(chRow);
+    rowS.parentNode.insertBefore(modBox, rowS.nextSibling);
     // passo 3: profundidade
     b.appendChild(el('p', 'il-note il-step', '3. Quanto fundo? (para a direita fica mais fundo)'));
     var P = C.PARAMS.depth;
@@ -386,6 +440,18 @@
       inp.click();
     }
   }
+  // imagens que vêm com o app (pasta biblioteca): paredes, pisos, tetos e personagens
+  function appLibImages(cb) {
+    var api = root.api;
+    if (!api || typeof api.libraryApp !== 'function') { cb([]); return; }
+    Promise.resolve(api.libraryApp()).then(function (list) {
+      cb((list || []).filter(function (p) { return IMG_RE.test(p); }).map(function (p) {
+        var nm = H.baseName ? H.baseName(p) : String(p).split(/[\\/]/).pop();
+        return { path: p, src: H.toUrl ? H.toUrl(p) : '', name: nm };
+      }));
+    }, function () { cb([]); });
+  }
+  function libFind(list, name) { for (var i = 0; i < list.length; i++) if (list[i].name.replace(/\.[^.]+$/, '') === name) return list[i]; return null; }
   function mediaPicker(cur, onSet, idBase) {
     var sel = el('select'); sel.id = idBase; sel.setAttribute('aria-label', 'Imagem ou GIF'); sel.style.flex = '1';
     var imgs = projectImages(), o = el('option', null, '(sem imagem)'); o.value = ''; sel.appendChild(o);

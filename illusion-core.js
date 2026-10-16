@@ -666,6 +666,12 @@
       }
     }
     flat('floor', -h, -90, false, 0.7); flat('ceiling', h, 90, true, 0.7);
+    // objetos com mídia na quina: planos em pé virados para o público (diagonal da quina)
+    (R.sprites || []).forEach(function (q, k) {
+      if (!q.media) { out.push(prim('sphere', [q.x, q.y, q.z], null, [q.size * 0.5, q.size * 0.5, q.size * 0.5], shade(x.c2, 0.9), { e: 0.6 })); return; }
+      var bob = q.fx === 'float' ? Math.sin(t * 1.6 + k) * q.size * 0.06 : 0;
+      quads.push({ p: [q.x, q.y + bob, q.z], r: [0, 45, 0], s: [q.size, q.size, 1], m: q.media, solid: false, a: 1, sprite: true, id: 'sp:' + q.id });
+    });
   }
 
   function buildScene(il, ill, t, h) {

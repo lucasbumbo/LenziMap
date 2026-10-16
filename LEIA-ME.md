@@ -191,7 +191,15 @@ Na aba **3D** agora abre direto o modo fácil:
 3. **Paredes e objetos**: marque Fundo, Parede esquerda, Parede direita, Chão e Teto, escolha cor e imagem ou GIF de cada uma, e adicione objetos (um bichinho em GIF, por exemplo).
 Depois, **Aplicar na Timeline**. Os tipos de ilusão, câmera, luz e geometria do palco ficam em **Mostrar opções avançadas** (no fim do painel). A escolha fica guardada.
 
-## ### 1.0.16
+### 1.0.17
+- Novo botão "Sala do rato" no passo 2 do painel 3D: monta de uma vez a sala na quina com paredes de labirinto, chão xadrez preto e branco, teto de ondas e o rato em pé na frente da parede.
+- Novo seletor "Personagem na frente da parede": adiciona um personagem da biblioteca (arquivos "Personagem - ..."). "Tirar personagens" remove todos.
+- "Onde o público fica?": De frente ou Na quina (diagonal). Gira o cubo e ajusta a altura do olho.
+- Imagens novas na biblioteca do app: Parede - Labirinto, Piso - Xadrez preto e branco, Piso - Labirinto, Teto - Ondas, Personagem - Rato em pe.
+- Texturas do 3D com mipmap e filtro anisotrópico: o xadrez do chão não faz mais moiré.
+- A sala na quina agora também mostra os personagens.
+
+### 1.0.16
 - A prévia 3D fica fixa no topo do painel enquanto você rola as opções (modo simples). Dá para escolher a sala e a profundidade sem perder o cubo de vista.
 - Visual mais limpo e grande: títulos dos passos maiores, botão escolhido em rosa, caixas com mais respiro.
 - Arrastar a prévia gira o cubo; a roda do mouse dá zoom.

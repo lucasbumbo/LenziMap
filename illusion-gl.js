@@ -69,7 +69,10 @@
         gl.bindTexture(gl.TEXTURE_2D, tx);
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, e.img);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        var iw = e.img.naturalWidth || e.img.videoWidth || e.img.width || 0, ih = e.img.naturalHeight || e.img.videoHeight || e.img.height || 0;
+        var pot = iw > 1 && ih > 1 && (iw & (iw - 1)) === 0 && (ih & (ih - 1)) === 0, mip = false;
+        if (pot) { try { gl.generateMipmap(gl.TEXTURE_2D); mip = true; var an = gl.getExtension('EXT_texture_filter_anisotropic'); if (an) gl.texParameterf(gl.TEXTURE_2D, an.TEXTURE_MAX_ANISOTROPY_EXT, Math.min(8, gl.getParameter(an.MAX_TEXTURE_MAX_ANISOTROPY_EXT))); } catch (e2) { mip = false; } }
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, mip ? gl.LINEAR_MIPMAP_LINEAR : gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
         e.last = nowMs; e.uploads++;
       } catch (er) { e.failed = true; e.err = 'O navegador bloqueou a imagem como textura: ' + String(er && er.message || er).slice(0, 80); return null; }
