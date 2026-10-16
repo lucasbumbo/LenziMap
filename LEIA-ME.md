@@ -191,6 +191,15 @@ Na aba **3D** agora abre direto o modo fácil:
 3. **Paredes e objetos**: marque Fundo, Parede esquerda, Parede direita, Chão e Teto, escolha cor e imagem ou GIF de cada uma, e adicione objetos (um bichinho em GIF, por exemplo).
 Depois, **Aplicar na Timeline**. Os tipos de ilusão, câmera, luz e geometria do palco ficam em **Mostrar opções avançadas** (no fim do painel). A escolha fica guardada.
 
+### 1.0.19
+- Desfazer e Refazer no painel 3D (botões no topo, sempre visíveis). Cada ajuste de controle vale um passo, e a Sala do rato vale um passo só.
+- Botão ↺ em cada controle deslizante: volta ao valor original.
+- "Voltar ao modelo": restaura a sala do modelo escolhido (Quarto, Corredor, Sala do rato...).
+- Camadas da sala: cada personagem ou painel tem nome, imagem ou GIF, profundidade (da janela até o fundo), lado, altura e tamanho. "+ Camada: objeto" e "+ Camada: painel (cobre a janela)". Máximo de 12 camadas de objeto, e aviso se a camada ficar atrás do fundo.
+- GIF animado agora anima dentro das paredes e camadas do 3D (os quadros são decodificados pelo app).
+- Rato animado (GIF com fundo transparente) na Sala do rato. Imagem nova na biblioteca: Personagem - Rato animado.
+- A Sala do rato com a face Topo escolhida agora vai para Frente + Direita, e não para o Topo.
+
 ### 1.0.18
 - Sala do rato: o teto agora usa o mesmo labirinto das paredes (antes era um teto de ondas que não combinava).
 - Corrigido: projeto antigo com a face ligada a uma superfície que já não existe. Ao Colocar na face, o app liga uma superfície livre sozinho, e a sala na quina entra nas duas faces.

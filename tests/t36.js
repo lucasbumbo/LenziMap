@@ -5,8 +5,8 @@ let fails=0,n=0;function ok(c,m){n++;if(c)console.log('PASS '+m);else{fails++;co
  const PORT=8970,h=await open(PORT,{easy:true,w:1300,h:1500}),p=h.p;
  await p.click('[data-go="ilusao"]');await p.waitForTimeout(1500);
  // simula a biblioteca do app: arquivos reais da pasta biblioteca
- await p.evaluate(({PORT})=>{const names=['Parede - Labirinto','Piso - Xadrez preto e branco','Teto - Ondas','Personagem - Rato em pe'];
-   window.api=Object.assign(window.api||{},{libraryApp:()=>Promise.resolve(names.map(n=>'/biblioteca/'+n+'.png'))});
+ await p.evaluate(({PORT})=>{const names=['Parede - Labirinto','Piso - Xadrez preto e branco','Teto - Ondas','Personagem - Rato animado'];
+   window.api=Object.assign(window.api||{},{libraryApp:()=>Promise.resolve(names.map(n=>'/biblioteca/'+n+(/animado/.test(n)?'.gif':'.png')))});
    const H=TimelineUI._h;const old=H.toUrl;H.toUrl=p=>'http://localhost:'+PORT+encodeURI(p);},{PORT});
  await p.evaluate(()=>IllusionUI.render&&IllusionUI.render());await p.waitForTimeout(500);
  ok(await p.locator('#il-modelo-rato').count()===1,'botão Sala do rato existe');
@@ -25,6 +25,11 @@ let fails=0,n=0;function ok(c,m){n++;if(c)console.log('PASS '+m);else{fails++;co
  console.log(JSON.stringify(bd));
  ok(bd.ok,'depois de Colocar na face, as duas faces da quina têm superfície real');
  ok(await p.evaluate(()=>TimelineUI._h.tl.seq.tracks.reduce((n,t)=>n+t.clips.length,0))===2,'Colocar na face cria clipe nas duas faces');
+ // face Topo escolhida: a Sala do rato vai para Frente + Direita, nao para o Topo
+ await p.click('#il-pick-top');await p.waitForTimeout(600);
+ await p.click('#il-modelo-rato');await p.waitForTimeout(1800);
+ const tf=await p.evaluate(()=>IllusionUI.state.il.target.faces.slice());
+ ok(tf.indexOf('top')<0&&tf.length===2,'com Topo escolhido, a sala vai para as faces da quina ('+tf+')');
  await p.click('#il-personagem-del');await p.waitForTimeout(600);
  ok(await p.evaluate(()=>IllusionUI.state.il.room.sprites.length)===0,'tirar personagens zera');
  await p.selectOption('#il-personagem','0');await p.waitForTimeout(800);

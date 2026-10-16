@@ -33,6 +33,26 @@
   var media = {}, mediaTx = {};
   var MIME = { gif: 'image/gif', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', apng: 'image/apng', svg: 'image/svg+xml', bmp: 'image/bmp' };
   function mediaKey(m) { return m && (m.path || m.src) || ''; }
+  // GIF/WebP animado: decodifica os quadros uma vez (ImageDecoder) e escolhe o quadro pelo relógio. Se não der, cai no <img>.
+  function decodeFrames(e, url, buf0) {
+    if (!e.anim || typeof ImageDecoder === 'undefined' || typeof fetch === 'undefined' || typeof createImageBitmap === 'undefined') return;
+    var ty = /\.webp(\?|#|$)/i.test(e.key) ? 'image/webp' : /\.a?png(\?|#|$)/i.test(e.key) ? 'image/apng' : 'image/gif';
+    (buf0 ? Promise.resolve(buf0) : fetch(url).then(function (r) { return r.arrayBuffer(); })).then(function (buf) {
+      var d = new ImageDecoder({ data: buf, type: ty });
+      return d.tracks.ready.then(function () {
+        var n = Math.min(d.tracks.selectedTrack.frameCount, 240); if (n < 2) return;
+        var list = [], total = 0, bytes = 0, i = 0;
+        function next() {
+          if (i >= n || bytes > 260e6) { if (list.length > 1) { e.frames = list; e.total = total; } return; }
+          return d.decode({ frameIndex: i }).then(function (res) {
+            var f = res.image, dur = Math.max(20, (f.duration || 100000) / 1000);
+            return createImageBitmap(f, { premultiplyAlpha: 'none' }).then(function (bm) { bytes += bm.width * bm.height * 4; list.push({ bm: bm, end: (total += dur) }); f.close(); i++; return next(); });
+          });
+        }
+        return next();
+      });
+    }).catch(function () {});
+  }
   function getMedia(m) {
     var k = mediaKey(m); if (!k) return null;
     var e = media[k]; if (e) return e;
@@ -45,13 +65,14 @@
       im.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;opacity:0.01;pointer-events:none;z-index:-1';
       if (document.body) document.body.appendChild(im);
       e.img = im; im.src = url;
+      decodeFrames(e, url, e.buf); e.buf = null;
     }
     var api = root.api;
     if (m.path && api && typeof api.readImage === 'function') {
       var ext = (m.path.split('.').pop() || '').toLowerCase();
       Promise.resolve(api.readImage(m.path)).then(function (buf) {
         if (!buf) throw new Error('arquivo vazio');
-        e.url = URL.createObjectURL(new Blob([buf], { type: MIME[ext] || 'image/png' }));
+        e.url = URL.createObjectURL(new Blob([buf], { type: MIME[ext] || 'image/png' })); e.buf = buf;
         useUrl(e.url);
       }).catch(function (er) { e.failed = true; e.err = 'Não consegui ler o arquivo: ' + String(er && er.message || er).slice(0, 80); });
     } else if (m.src) useUrl(m.src);
@@ -62,14 +83,16 @@
     var e = getMedia(m); if (!e) return null;
     if (!e.ready || e.failed || !gl) return null;
     var tx = mediaTx[e.key];
-    var need = !tx || (e.anim && nowMs - e.last > 33);
+    var src = e.img, fi = -1;
+    if (e.frames && e.total > 0) { var tm = nowMs % e.total; fi = 0; while (fi < e.frames.length - 1 && e.frames[fi].end <= tm) fi++; src = e.frames[fi].bm; }
+    var need = !tx || (fi >= 0 ? fi !== e.fi : (e.anim && nowMs - e.last > 33));
     if (need) {
       try {
         if (!tx) tx = mediaTx[e.key] = gl.createTexture();
         gl.bindTexture(gl.TEXTURE_2D, tx);
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, e.img);
-        var iw = e.img.naturalWidth || e.img.videoWidth || e.img.width || 0, ih = e.img.naturalHeight || e.img.videoHeight || e.img.height || 0;
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, src);
+        var iw = src.naturalWidth || src.width || 0, ih = src.naturalHeight || src.height || 0; e.fi = fi;
         var pot = iw > 1 && ih > 1 && (iw & (iw - 1)) === 0 && (ih & (ih - 1)) === 0, mip = false;
         if (pot) { try { gl.generateMipmap(gl.TEXTURE_2D); mip = true; var an = gl.getExtension('EXT_texture_filter_anisotropic'); if (an) gl.texParameterf(gl.TEXTURE_2D, an.TEXTURE_MAX_ANISOTROPY_EXT, Math.min(8, gl.getParameter(an.MAX_TEXTURE_MAX_ANISOTROPY_EXT))); } catch (e2) { mip = false; } }
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, mip ? gl.LINEAR_MIPMAP_LINEAR : gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);

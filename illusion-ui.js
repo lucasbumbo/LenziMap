@@ -15,9 +15,9 @@
     '.il-kid .il-row button{font-size:15px;padding:10px 14px;min-height:44px}.il-kid .il-big button{font-size:18px;padding:14px 20px;min-height:54px;width:100%}.il-sticky{position:sticky;top:-18px;z-index:20;background:var(--panel);padding:20px 0 8px;display:flex;flex-direction:column;gap:8px;box-shadow:0 6px 10px -6px #000}.il-sticky .il-cv{max-height:34vh;width:auto;max-width:100%;margin:0 auto}.il-kid .il-note{font-size:15px}.il-kid .il-box{padding:14px;gap:12px;border-radius:14px}.il-kid .il-box>summary{font-size:20px;font-weight:700}.il-kid .il-row button{flex:1 1 auto;border-radius:12px}.il-kid .il-row button.on{background:var(--accent);color:#fff;border-color:var(--accent)}.il-kid .il-step{font-size:18px;font-weight:700;color:var(--fg);margin:6px 0 0}.il-kid label.field span{font-size:16px;font-weight:700;color:var(--fg)}.il-kid .il-box select{font-size:17px;padding:12px;border-radius:10px}.il-kid .il-sl{font-size:15px}.il-kid .il-sl input[type=range]{height:34px}.il-kid .il-ok{font-size:16px;font-weight:600}.il-kid #il-cores>summary,.il-kid #il-fino>summary{font-size:15px;font-weight:600;color:var(--muted)}' +
     '.il-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.il-row label{display:flex;gap:4px;align-items:center;font-size:12px}.il-grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}' +
     '.il-grid3 input,.il-box input[type=number],.il-box input[type=text],.il-box select{font:inherit;color:var(--fg);background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:5px 6px;width:100%;min-width:0}' +
-    '.il-sl{display:grid;grid-template-columns:1fr 64px auto;gap:6px;align-items:center;font-size:12px}.il-sl>span{grid-column:1/4;color:var(--muted)}.il-sl input[type=range]{width:100%}' +
+    '.il-sl{display:grid;grid-template-columns:1fr 64px auto auto;gap:6px;align-items:center;font-size:12px}.il-sl>span{grid-column:1/5;color:var(--muted)}.il-sl input[type=range]{width:100%}' +
     '.il-cv{width:100%;height:auto;aspect-ratio:8/5;background:#05070a;border:1px solid var(--line);border-radius:6px;display:block;touch-action:none}.il-note{font-size:12px;color:var(--muted);margin:0}.il-warn{font-size:12px;color:#ffcf6b;margin:0}' +
-    '.il-kf{font:inherit;border:1px solid var(--line);background:var(--panel-2);color:var(--fg);border-radius:6px;padding:2px 6px;cursor:pointer;font-size:12px}.il-kf.has{color:#ffd23d}.il-ok{color:#9ff0c4}';
+    '.il-rs{font:inherit;border:1px solid var(--line);background:var(--panel-2);color:var(--fg);border-radius:6px;padding:2px 6px;cursor:pointer;font-size:12px}.il-kf{font:inherit;border:1px solid var(--line);background:var(--panel-2);color:var(--fg);border-radius:6px;padding:2px 6px;cursor:pointer;font-size:12px}.il-kf.has{color:#ffd23d}.il-ok{color:#9ff0c4}';
 
   function el(tag, cls, txt) { var e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
   function btn(txt, fn, cls, id) { var b = el('button', 'btn small' + (cls ? ' ' + cls : ''), txt); b.type = 'button'; if (id) b.id = id; b.addEventListener('click', fn); return b; }
@@ -34,7 +34,7 @@
   function newIllusion(preset) {
     var cur = S.il, il = C.defaultIllusion(preset);
     if (cur) { il.target = clone(cur.target); il.style.color1 = cur.style.color1; il.style.color2 = cur.style.color2; il.quality = cur.quality; il.camera = clone(cur.camera); }
-    S.il = il; S.assetId = null; S.msg = 'Nova ilusão: ' + il.name + '. Ligue as faces às superfícies e aperte Aplicar na Timeline.';
+    histReset(); S.il = il; S.assetId = null; S.msg = 'Nova ilusão: ' + il.name + '. Ligue as faces às superfícies e aperte Aplicar na Timeline.';
   }
   function hostObj() {
     return { seq: seq, checkpoint: H.checkpoint, push: H.push, syncClock: H.syncClock, renderAll: H.renderAll, setOn: H.setOn, now: function () { return H.tl.clock.now(); }, surfaces: function () { return H.surfaces().map(function (x) { return x.s; }); } };
@@ -42,17 +42,55 @@
   function syncOut() { try { H.rend.sync(H.view()); } catch (e) {} H.push(); }
   // Mudança na ilusão de trabalho: se já está na timeline, vai junto (com Desfazer); senão só a prévia muda.
   function changed(key, structural) {
+    histPush(key || 'il-edit');
     if (S.assetId) {
       var cur = T.illusionOf(seq(), S.assetId);
       if (!cur) { S.assetId = null; }
       else { H.checkpoint(key || 'il-edit'); var r = T.update(seq(), S.assetId, S.il); if (r.ok) S.il = clone(r.value); H.syncClock(); syncOut(); }
     }
+    histSettle();
     if (structural) render();
   }
   function editStage(fn, key) {
+    histPush(key || 'il-stage');
     H.checkpoint(key || 'il-stage');
     T.ensureStage(seq()); fn(seq().stage); seq().stage = C.fixStage(seq().stage);
-    syncOut(); render();
+    histSettle(); syncOut(); render();
+  }
+  // ---------- desfazer / refazer / voltar ao modelo (só do painel 3D) ----------
+  // S.cur é sempre o estado de agora; antes de cada mudança ele vai para a pilha de desfazer.
+  S.hist = []; S.fut = []; S.cur = null; S.hLast = { k: '', t: 0 }; S.hSusp = 0; S.base = {}; S.modelBase = null; S.baseIl = null;
+  function snapNow() { try { return { il: clone(S.il), stage: seq().stage ? clone(seq().stage) : null }; } catch (e) { return null; } }
+  function histPush(key) {
+    if (S.hSusp > 0) return;
+    var now = Date.now();
+    if (!S.cur) S.cur = snapNow();
+    if (!S.cur) return;
+    if (S.hLast.k === key && now - S.hLast.t < 700 && S.hist.length) { S.hLast.t = now; return; }
+    S.hist.push(S.cur); if (S.hist.length > 60) S.hist.shift();
+    S.fut = []; S.hLast = { k: key, t: now };
+  }
+  function updHistBtns() {
+    var u = document.getElementById('il-undo'), r = document.getElementById('il-redo');
+    if (u) u.disabled = !S.hist.length; if (r) r.disabled = !S.fut.length;
+  }
+  function histSettle() { S.cur = snapNow(); updHistBtns(); }
+  function histReset() { S.hist = []; S.fut = []; S.cur = null; S.hLast = { k: '', t: 0 }; S.base = {}; S.modelBase = null; S.baseIl = null; }
+  function histGroup(fn) { histPush('grp'); S.hLast.t = 0; S.hSusp++; try { fn(); } finally { S.hSusp--; } histSettle(); }
+  function histRestore(sn) {
+    if (!sn) return;
+    S.il = clone(sn.il);
+    if (sn.stage) { T.ensureStage(seq()); seq().stage = C.fixStage(clone(sn.stage)); }
+    if (S.assetId) { H.checkpoint('il-undo'); var r = T.update(seq(), S.assetId, S.il); if (r.ok) S.il = clone(r.value); H.syncClock(); }
+    S.cur = snapNow(); try { stashFace(); } catch (e) {}
+    syncOut(); render(); updHistBtns();
+  }
+  function undo() { if (!S.hist.length) return; var now = S.cur || snapNow(); var sn = S.hist.pop(); S.fut.push(now); S.hLast = { k: '', t: 0 }; S.msg = 'Desfeito.'; histRestore(sn); }
+  function redo() { if (!S.fut.length) return; var now = S.cur || snapNow(); var sn = S.fut.pop(); S.hist.push(now); S.hLast = { k: '', t: 0 }; S.msg = 'Refeito.'; histRestore(sn); }
+  function setModelBase() { S.modelBase = { room: clone(S.il.room), depth: S.il.params.depth }; }
+  function backToModel() {
+    var mb = S.modelBase || S.baseIl; if (!mb) return;
+    histGroup(function () { S.il.room = clone(mb.room); S.il.params.depth = mb.depth; S.msg = 'Voltei ao modelo original.'; changed('il-model', true); });
   }
 
   // ---------- peças de interface ----------
@@ -62,8 +100,14 @@
     r.type = 'range'; r.min = min; r.max = max; r.step = step; r.value = get(); n.type = 'number'; n.min = min; n.max = max; n.step = step; n.value = fixed(get(), 2);
     r.setAttribute('aria-label', label); n.setAttribute('aria-label', label + ' valor');
     w.appendChild(lab); w.appendChild(r); w.appendChild(n);
-    function put(v) { v = Math.max(min, Math.min(max, v)); if (!isFinite(v)) return; set(v); r.value = v; n.value = fixed(v, 2); }
+    var bkey = (S.il && S.il.target ? S.il.target.cube + ':' + (S.il.target.faces[0] || '') : '') + '|' + label;
+    if (opts.def != null) S.base[bkey] = opts.def; else if (S.base[bkey] === undefined) S.base[bkey] = +get();
+    var rs = el('button', 'il-rs', '↺'); rs.type = 'button'; rs.title = 'Voltar ao valor original'; rs.setAttribute('aria-label', 'Voltar ao original: ' + label);
+    function rsState() { var off = Math.abs(+r.value - S.base[bkey]) < 1e-9; rs.disabled = off; rs.style.opacity = off ? '0.35' : '1'; }
+    rs.addEventListener('click', function () { put(S.base[bkey]); });
+    function put(v) { v = Math.max(min, Math.min(max, v)); if (!isFinite(v)) return; set(v); r.value = v; n.value = fixed(v, 2); rsState(); }
     r.addEventListener('input', function () { put(+r.value); });
+    w.appendChild(rs); rsState();
     n.addEventListener('change', function () { put(parseFloat(n.value)); });
     n.addEventListener('keydown', function (e) { e.stopPropagation(); if (e.key === 'Enter') n.blur(); });
     if (opts.kf) {
@@ -175,7 +219,7 @@
   function selectFace(cubeId, f) {
     S.curFace = f;
     var st = stage(), cube = C.cubeById(st, cubeId) || st.cubes[0];
-    stashFace();
+    stashFace(); histReset();
     var it = S.faceIl[cube.id + ':' + f];
     if (it && it.assetId && !T.illusionOf(seq(), it.assetId)) it.assetId = null;
     if (!it || !it.assetId) { var ex = findAssetFor(cube.id, f); if (ex) { it = { il: clone(ex.il), assetId: ex.id }; S.faceIl[cube.id + ':' + f] = it; } }
@@ -238,12 +282,12 @@
     var rowS = el('div', 'il-row'); rowS.style.flexWrap = 'wrap';
     Object.keys(defs).forEach(function (k) {
       var d = defs[k];
-      rowS.appendChild(btn(d[0], function () {
+      rowS.appendChild(btn(d[0], function () { histGroup(function () {
         S.sala = k; S.msg = 'Sala escolhida: ' + d[0] + '. Quando gostar da prévia, clique em Colocar na face.';
         C.ROOM_WALLS.forEach(function (w2) { S.il.room.walls[w2].on = !!d[1][w2]; });
         S.il.params.depth = Math.max(C.PARAMS.depth.min, Math.min(C.PARAMS.depth.max, d[2]));
         changed('il-room', true);
-      }, S.sala === k ? 'on' : '', 'il-sala-' + k));
+      }); setModelBase(); }, S.sala === k ? 'on' : '', 'il-sala-' + k));
     });
     b.appendChild(rowS);
     var ring = ['front', 'right', 'back', 'left'], ix = ring.indexOf(f0);
@@ -254,7 +298,8 @@
     // onde o público fica: de frente ou na diagonal (quina do cubo virada para o público)
     var pubBox = el('div'); pubBox.appendChild(el('p', 'il-note il-step', 'Onde o público fica?'));
     var pubRow = el('div', 'il-row'), isQuina = Math.abs((cube0.rotY || 0) + 45) < 1;
-    function setPublico(quina) {
+    function setPublico(quina) { histGroup(function () { setPublico0(quina); }); }
+    function setPublico0(quina) {
       var ringP = ['front', 'right', 'back', 'left'], fx = ringP.indexOf(curFace());
       editStage(function (s2) {
         var c = C.cubeById(s2, S.il.target.cube) || s2.cubes[0], vz = Math.max(40, s2.viewer.pos[2] || 130);
@@ -271,8 +316,10 @@
     var modRow = el('div', 'il-row');
     modRow.appendChild(btn('🐭 Sala do rato', function () {
       appLibImages(function (lib) {
-        var lab = libFind(lib, 'Parede - Labirinto'), pis = libFind(lib, 'Piso - Xadrez preto e branco'), rato = libFind(lib, 'Personagem - Rato em pe');
+        var lab = libFind(lib, 'Parede - Labirinto'), pis = libFind(lib, 'Piso - Xadrez preto e branco'), rato = libFind(lib, 'Personagem - Rato animado') || libFind(lib, 'Personagem - Rato em pe');
         if (!lab || !pis || !rato) { S.msg = 'Não achei as imagens da Sala do rato na biblioteca do app.'; render(); return; }
+        if (['front', 'right', 'back', 'left'].indexOf(curFace()) < 0) selectFace(S.il.target.cube, 'front');
+        histGroup(function () {
         var ringM = ['front', 'right', 'back', 'left'], fm = ringM.indexOf(curFace());
         editStage(function (s2) { var c = C.cubeById(s2, S.il.target.cube) || s2.cubes[0]; c.rotY = -45; s2.viewer.pos = [0, c.pos[1] + 2, Math.max(40, s2.viewer.pos[2] || 130)]; }, 'il-view');
         if (fm >= 0) setJoin(ringM[fm] + '+' + ringM[(fm + 1) % 4]);
@@ -283,6 +330,7 @@
         S.il.room.sprites = [{ id: 'rato1', name: 'Rato', x: -4, y: -2, z: -4, size: 12, media: rato, fx: '' }];
         S.msg = 'Sala do rato montada. Quando gostar da prévia, clique em Colocar na face.';
         changed('il-room', true);
+        }); setModelBase();
       });
     }, null, 'il-modelo-rato'));
     modBox.appendChild(modRow);
@@ -308,13 +356,13 @@
     // passo 3: profundidade
     b.appendChild(el('p', 'il-note il-step', '3. Quanto fundo? (para a direita fica mais fundo)'));
     var P = C.PARAMS.depth;
-    slider(b, 'Profundidade do fundo (pol)', function () { return S.il.params.depth; }, function (v) { S.il.params.depth = v; changed('il-p:depth'); }, P.min, P.max, P.step, { kf: 'depth' });
+    slider(b, 'Profundidade do fundo (pol)', function () { return S.il.params.depth; }, function (v) { S.il.params.depth = v; changed('il-p:depth'); }, P.min, P.max, P.step, { kf: 'depth', def: (S.modelBase || S.baseIl || {}).depth });
     b.appendChild(S._ar2); S._ar2.className = 'il-row il-big'; b.appendChild(S._msg);
     // cores e imagens
     var label = { back: 'Fundo', left: 'Parede esquerda', right: 'Parede direita', floor: 'Chão', ceiling: 'Teto' };
     if (jn) { label.back = 'Parede do fundo (direita)'; label.right = 'Parede do fundo (esquerda)'; }
-    var cores = el('details', 'il-box'); cores.id = 'il-cores'; cores.open = !!S.open.cores; cores.addEventListener('toggle', function () { S.open.cores = cores.open; });
-    cores.appendChild(el('summary', null, 'Cores e imagens (opcional)'));
+    var cores = el('details', 'il-box'); cores.id = 'il-cores'; cores.open = S.open.cores !== false; cores.addEventListener('toggle', function () { S.open.cores = cores.open; });
+    cores.appendChild(el('summary', null, 'Camadas: imagens, personagens e profundidade'));
     var fino = el('details', 'il-box'); fino.id = 'il-fino'; fino.open = !!S.open.fino; fino.addEventListener('toggle', function () { S.open.fino = fino.open; });
     fino.appendChild(el('summary', null, 'Mais opções (só se precisar)'));
     var dl = el('label', null, 'Duração (s) '), dn = el('input'); dn.type = 'number'; dn.min = 1; dn.max = 600; dn.step = 1; dn.value = S.dur; dn.id = 'il-dur'; dn.style.width = '64px'; dn.addEventListener('change', function () { S.dur = Math.max(1, Math.min(600, +dn.value || 8)); });
@@ -334,10 +382,53 @@
       var col = el('input'); col.type = 'color'; col.value = w.color; col.id = 'il-wallc-' + k; col.title = 'Cor da parede'; col.setAttribute('aria-label', 'Cor: ' + label[k]);
       col.addEventListener('input', function () { w.color = col.value; changed('il-room-c'); });
       row.appendChild(col);
-      row.appendChild(mediaPicker(w.media, function (m) { w.media = m; changed('il-room', true); }, 'il-wallm-' + k));
+      var wp = mediaPicker(w.media, function (m) { w.media = m; changed('il-room', true); }, 'il-wallm-' + k); wp.style.flex = '1 1 100%'; row.appendChild(wp);
       cores.appendChild(row);
       if (!jn && w.on && k !== 'back') slider(fino, C.WALL_LABEL[k] + ': profundidade para dentro (pol)', function () { return w.d; }, function (v) { w.d = v; changed('il-room-d'); }, 0, 14, 0.5);
     });
+    // ---- camadas: cada camada é uma imagem ou GIF; profundidade vai de perto da janela até o fundo ----
+    var hC = cube0.size / 2, DC = Math.max(8, S.il.params.depth);
+    function lyT(q) { return jn ? hC - (q.x + q.z) / 2 : -q.z; }
+    function lyS(q) { return jn ? (q.x - q.z) / 2 : q.x; }
+    function lyPut(q, t, sd) { if (jn) { q.x = hC - t + sd; q.z = hC - t - sd; } else { q.x = sd; q.z = -t; } q.x = Math.max(-60, Math.min(60, q.x)); q.z = Math.max(-600, Math.min(60, q.z)); }
+    cores.appendChild(el('p', 'il-note il-step', 'Camadas da sala'));
+    cores.appendChild(el('p', 'il-note', 'Paredes, chão e teto acima. Abaixo, personagens e painéis: cada um tem profundidade (de perto da janela até o fundo), lado e altura. O botão ↺ volta ao valor original.'));
+    R.sprites.forEach(function (q, i) {
+      var g = el('div', 'il-box'); g.dataset.layer = q.id;
+      var tp = el('div', 'il-row'), nm = el('input'); nm.type = 'text'; nm.value = q.name; nm.maxLength = 40; nm.style.flex = '1'; nm.setAttribute('aria-label', 'Nome da camada');
+      nm.addEventListener('keydown', function (e) { e.stopPropagation(); if (e.key === 'Enter') nm.blur(); });
+      nm.addEventListener('change', function () { q.name = nm.value.trim().slice(0, 40) || 'Camada'; changed('il-room'); });
+      tp.appendChild(nm); tp.appendChild(btn('Remover', function () { R.sprites.splice(i, 1); changed('il-room', true); }, null, 'il-ly-del-' + i)); g.appendChild(tp);
+      var pk = mediaPicker(q.media, function (m) { q.media = m; changed('il-room', true); }, 'il-lym-' + i); pk.style.width = '100%'; g.appendChild(pk);
+      slider(g, 'Profundidade (0 = na janela, ' + Math.round(DC) + ' = no fundo)', function () { return Math.max(0, Math.min(DC, lyT(q))); }, function (v) { lyPut(q, v, lyS(q)); changed('il-room-t'); }, 0, Math.round(DC), 0.5);
+      slider(g, 'Esquerda / direita', function () { return Math.max(-hC * 1.5, Math.min(hC * 1.5, lyS(q))); }, function (v) { lyPut(q, lyT(q), v); changed('il-room-s'); }, -Math.round(hC * 1.5), Math.round(hC * 1.5), 0.5);
+      slider(g, 'Altura', function () { return Math.max(-hC, Math.min(hC, q.y)); }, function (v) { q.y = v; changed('il-room-y'); }, -hC, hC, 0.5);
+      slider(g, 'Tamanho (pol)', function () { return q.size; }, function (v) { q.size = v; changed('il-room-sz'); }, 0.5, 40, 0.5);
+      if (lyT(q) > DC + 0.5) g.appendChild(el('p', 'il-warn', 'Esta camada está atrás do fundo da sala e não aparece. Diminua a profundidade.'));
+      if (!q.media) g.appendChild(el('p', 'il-warn', 'Sem imagem: escolha uma imagem ou GIF acima.'));
+      cores.appendChild(g);
+    });
+    if (!R.sprites.length) cores.appendChild(el('p', 'il-note', 'Sem personagens ou painéis ainda. Use "+ Camada" abaixo, ou o seletor de personagens em Modelo pronto.'));
+    var lyAdd = el('div', 'il-row');
+    function addLayer(kind) {
+      if (R.sprites.length >= C.MAX_SPRITES) { S.msg = 'Máximo de ' + C.MAX_SPRITES + ' camadas de objeto por sala.'; render(); return; }
+      pickImage(function (m) {
+        var q = { id: 'sp' + Math.random().toString(36).slice(2, 7), name: (kind === 'painel' ? 'Painel ' : 'Objeto ') + (R.sprites.length + 1), x: 0, y: kind === 'painel' ? 0 : -hC * 0.2, z: 0, size: kind === 'painel' ? hC * 2 : Math.max(2, hC * 1.2), media: m, fx: '' };
+        lyPut(q, kind === 'painel' ? DC * 0.5 : Math.min(DC * 0.3, DC), 0); R.sprites.push(q); S.msg = 'Camada adicionada. Ajuste a profundidade com o controle.'; changed('il-room', true);
+      });
+    }
+    lyAdd.appendChild(btn('+ Camada: objeto', function () { addLayer('objeto'); }, null, 'il-ly-add-obj'));
+    lyAdd.appendChild(btn('+ Camada: painel (cobre a janela)', function () { addLayer('painel'); }, null, 'il-ly-add-painel'));
+    cores.appendChild(lyAdd);
+    cores.appendChild(el('p', 'il-note', 'Imagem ou GIF (PNG com fundo transparente funciona melhor). Vídeo MP4 ainda não vale no 3D.'));
+    if (!jn) {
+      var sv = el('div', 'il-row');
+      [['top', 'Ver de cima'], ['side', 'Ver de lado']].forEach(function (v) { sv.appendChild(btn(v[1], function () { S.roomView = v[0]; render(); }, roomView() === v[0] ? 'on' : '', 'il-rv-' + v[0])); });
+      cores.appendChild(sv);
+      var rcv = el('canvas', 'il-cv il-rcv'); rcv.id = 'il-room-cv'; rcv.width = 560; rcv.height = 300; rcv.style.cursor = 'grab'; rcv.setAttribute('role', 'img'); rcv.setAttribute('aria-label', 'Vista para arrastar camadas e paredes');
+      cores.appendChild(rcv); S.rcv = rcv; wireRoomCanvas(rcv, R, hC);
+      cores.appendChild(el('p', 'il-note', 'Arraste o fundo, as paredes e as camadas amarelas nesta vista.'));
+    }
     b.appendChild(cores);
     b.appendChild(fino);
     return b;
@@ -782,6 +873,10 @@
       var vr0 = el('div', 'il-row'); vr0.style.flexWrap = 'wrap';
       [['De frente', 0, 8], ['De canto', 35, 22], ['De cima', 20, 70]].forEach(function (a3) { vr0.appendChild(btn(a3[0], function () { S.view = 'free'; S.il.camera.view = 'free'; S.orbit.yaw = a3[1]; S.orbit.pitch = a3[2]; }, null, 'il-ang-' + a3[2])); });
       top.appendChild(vr0);
+      var hr = el('div', 'il-row'); hr.style.flexWrap = 'wrap';
+      hr.appendChild(btn('↶ Desfazer', undo, null, 'il-undo')); hr.appendChild(btn('↷ Refazer', redo, null, 'il-redo'));
+      if (S.il && S.il.preset === 'room-builder') hr.appendChild(btn('↺ Voltar ao modelo', backToModel, null, 'il-modelo-reset'));
+      top.appendChild(hr);
       w.appendChild(el('p', 'il-note', 'Clique numa face do cubo para escolher. Arraste para girar (roda do mouse: zoom).'));
     }
     var stt = el('p', 'il-note'); stt.id = 'il-status'; stt.style.cssText = 'min-height:34px;overflow:hidden;font-variant-numeric:tabular-nums' + (S.adv ? '' : ';display:none'); w.appendChild(stt);
@@ -806,6 +901,8 @@
     al.appendChild(ac); al.appendChild(document.createTextNode(' Opções avançadas (para quem entende do assunto)')); w.appendChild(al);
     if (!S.adv && S.il.preset !== 'room-builder') { var back = el('div', 'il-row'); back.appendChild(el('span', 'il-note', 'Esta ilusão não é a Sala de paredes.')); back.appendChild(btn('Voltar para a Sala de paredes', function () { newIllusion('room-builder'); render(); }, null, 'il-back-room')); w.insertBefore(back, w.firstChild.nextSibling); }
     sec.appendChild(w);
+    if (!S.cur) { histSettle(); if (!S.baseIl && S.il && S.il.room) S.baseIl = { room: clone(S.il.room), depth: S.il.params.depth }; }
+    updHistBtns();
     drawRoomCv();
     if (sec.parentNode) sec.parentNode.scrollTop = scroll;
     // câmera livre: arrastar gira, rolar aproxima
