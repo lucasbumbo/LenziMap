@@ -523,6 +523,89 @@
     return best;
   }
   // Contorno (em pixels da prévia) das camadas pedidas, projetado em cada face onde o público as enxerga. Serve para destacar o que está selecionado.
+  // recorta um polígono convexo pelo quadrado 0..1 (Sutherland-Hodgman)
+  function clipUnit(poly) {
+    var edges = [[0, 1, 0], [0, -1, 1], [1, 1, 0], [1, -1, 1]];            // [eixo, sinal, limite]: sinal*(v - limite) >= 0
+    edges.forEach(function (E) {
+      var inp = poly, o = []; if (!inp.length) return;
+      var lim = E[2], sg = E[2] === 0 ? 1 : -1;
+      function side(a) { return sg * (a[E[0]] - lim); }
+      for (var i = 0; i < inp.length; i++) {
+        var a = inp[i], b = inp[(i + 1) % inp.length], sa = side(a), sb = side(b);
+        if (sa >= 0) o.push(a);
+        if ((sa >= 0) !== (sb >= 0)) { var t = sa / (sa - sb); o.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]); }
+      }
+      poly = o;
+    });
+    return poly;
+  }
+  // Polígono convexo recortado -> quadrilátero com a mesma orientação e ordem de cantos do original (sem cantos repetidos)
+  function quadFromPoly(poly, orig) {
+    function area(P) { var a = 0; for (var i = 0; i < P.length; i++) { var u = P[i], v = P[(i + 1) % P.length]; a += u[0] * v[1] - v[0] * u[1]; } return a / 2; }
+    var P = poly.map(function (z) { return [z[0], z[1]]; }), i;
+    P = P.filter(function (z, k) { var o = P[(k + P.length - 1) % P.length]; return Math.hypot(z[0] - o[0], z[1] - o[1]) > 0.015; });
+    if (area(P) * area(orig) < 0) P.reverse();
+    while (P.length > 4) {                                                   // tira o vértice que menos contribui
+      var bi = 0, ba = Infinity;
+      for (i = 0; i < P.length; i++) { var a = P[(i + P.length - 1) % P.length], b = P[i], c = P[(i + 1) % P.length], ar = Math.abs((b[0] - a[0]) * (c[1] - a[1]) - (c[0] - a[0]) * (b[1] - a[1])); if (ar < ba) { ba = ar; bi = i; } }
+      P.splice(bi, 1);
+    }
+    while (P.length < 4) {                                                   // divide a maior aresta ao meio
+      var li = 0, bl = -1;
+      for (i = 0; i < P.length; i++) { var u = P[i], v = P[(i + 1) % P.length], l = Math.hypot(v[0] - u[0], v[1] - u[1]); if (l > bl) { bl = l; li = i; } }
+      var u2 = P[li], v2 = P[(li + 1) % P.length]; P.splice(li + 1, 0, [(u2[0] + v2[0]) / 2, (u2[1] + v2[1]) / 2]);
+    }
+    var bestR = 0, bestD = Infinity, r, k;
+    for (r = 0; r < 4; r++) { var d = 0; for (k = 0; k < 4; k++) { var pp = P[(k + r) % 4]; d += Math.hypot(pp[0] - orig[k][0], pp[1] - orig[k][1]); } if (d < bestD) { bestD = d; bestR = r; } }
+    return [0, 1, 2, 3].map(function (k) { return P[(k + bestR) % 4]; });
+  }
+  // Homografia do quadrado unitário para o quadrilátero P (cantos 0,0 / 1,0 / 1,1 / 0,1) e a inversa aplicada a um ponto.
+  function homUnit(P) {
+    var x0 = P[0][0], y0 = P[0][1], x1 = P[1][0], y1 = P[1][1], x2 = P[2][0], y2 = P[2][1], x3 = P[3][0], y3 = P[3][1];
+    var dx1 = x1 - x2, dx2 = x3 - x2, dx3 = x0 - x1 + x2 - x3, dy1 = y1 - y2, dy2 = y3 - y2, dy3 = y0 - y1 + y2 - y3, g = 0, h = 0, den = dx1 * dy2 - dx2 * dy1;
+    if ((Math.abs(dx3) > 1e-12 || Math.abs(dy3) > 1e-12) && Math.abs(den) > 1e-12) { g = (dx3 * dy2 - dx2 * dy3) / den; h = (dx1 * dy3 - dx3 * dy1) / den; }
+    return [x1 - x0 + g * x1, x3 - x0 + h * x3, x0, y1 - y0 + g * y1, y3 - y0 + h * y3, y0, g, h];
+  }
+  function homInv(m, x, y) {
+    var a = m[0], b = m[1], c = m[2], d = m[3], e = m[4], f = m[5], g = m[6], h = m[7], i = 1;
+    var A = e * i - f * h, B = c * h - b * i, C = b * f - c * e, D = f * g - d * i, E = a * i - c * g, F = c * d - a * f, G = d * h - e * g, H = b * g - a * h, I = a * e - b * d;
+    var X = A * x + B * y + C, Y = D * x + E * y + F, W = G * x + H * y + I; if (Math.abs(W) < 1e-12) return [0, 0];
+    return [X / W, Y / W];
+  }
+  // Para "Montar no cubo": cada camada da sala (parede, piso, personagem) em cada face onde ela aparece.
+  // Devolve [{id, sprite, media, face, q:[[s,t] x4], mask:[[u,v] x4]}]. q = onde a imagem INTEIRA cairia no plano da janela da face (cima-esq, cima-dir, baixo-dir, baixo-esq);
+  // mask = a parte dela que realmente aparece dentro da janela, em coordenadas da imagem (0..1). (s,t) vai de 0 a 1 na textura da face (t=0 é o topo).
+  function layerPlacement(rig, il) {
+    il = getIl(il); var out = [], V = C.v; if (!il || !il.room) return out;
+    var cu = C.cubeById(rig, il.target.cube); if (!cu) return out;
+    il.target.faces.forEach(function (fc) {
+      var r; try { r = C.resolveFace(rig, il, null, null, 0, { cube: cu.id, face: fc }); } catch (e) { return; }
+      if (!r || !r.scene) return;
+      var c = C.faceFrame(cu, fc).corners, e1 = V.sub(c[1], c[0]), e3 = V.sub(c[3], c[0]), n = V.cross(e1, e3), l1 = V.dot(e1, e1), l3 = V.dot(e3, e3);
+      (r.scene.quads || []).forEach(function (q) {
+        if (q.pickOnly || !q.m) return;
+        var id = q.id || (q.sprite ? 'sp:' + q.sprite : null); if (!id) return;
+        var Wm = C.m.mul(r.local.M, C.m.trs(q.p, q.r, q.s)), pts = [[-0.5, -0.5], [0.5, -0.5], [0.5, 0.5], [-0.5, 0.5]].map(function (v) { return C.m.pt(Wm, [v[0], v[1], 0]); });
+        if (q.sprite) { var me = getMedia(q.m); if (me && me.w && me.h && me.w / me.h !== 1) { var asp = me.w / me.h, cx = (pts[0][0] + pts[1][0] + pts[2][0] + pts[3][0]) / 4, cz = (pts[0][2] + pts[1][2] + pts[2][2] + pts[3][2]) / 4; pts = pts.map(function (v) { return [cx + (v[0] - cx) * asp, v[1], cz + (v[2] - cz)]; }); } }
+        var st = [], ok = true;
+        pts.forEach(function (w) {
+          if (!ok) return;
+          var d = V.sub(w, r.eye), den = V.dot(n, d); if (Math.abs(den) < 1e-9) { ok = false; return; }
+          var t = V.dot(n, V.sub(c[0], r.eye)) / den; if (t <= 0) { ok = false; return; }
+          var P = V.add(r.eye, V.mul(d, t)), rel = V.sub(P, c[0]); st.push([V.dot(rel, e1) / l1, V.dot(rel, e3) / l3]);
+        });
+        if (!ok) return;
+        var fu = q.flipU ? 1 : 0, fv = q.flipV ? 1 : 0, uvs = [[0, 1], [1, 1], [1, 0], [0, 0]], img = [null, null, null, null];
+        st.forEach(function (z, k) { var u = uvs[k][0], v = uvs[k][1]; if (fu) u = 1 - u; if (fv) v = 1 - v; img[v ? (u ? 2 : 3) : (u ? 1 : 0)] = z; });
+        var poly = clipUnit(img.map(function (z) { return [z[0], z[1]]; })); if (poly.length < 3) return;
+        var ar = 0; for (var k = 0; k < poly.length; k++) { var u2 = poly[k], v2 = poly[(k + 1) % poly.length]; ar += u2[0] * v2[1] - v2[0] * u2[1]; }
+        if (Math.abs(ar / 2) < 0.02) return;                               // quase nada dessa camada aparece nesta face
+        var hm = homUnit(img), uvp = poly.map(function (z) { var w = homInv(hm, z[0], z[1]); return [Math.max(0, Math.min(1, w[0])), Math.max(0, Math.min(1, w[1]))]; });
+        out.push({ id: id, sprite: !!q.sprite, media: q.m, face: fc, q: img, mask: quadFromPoly(uvp, [[0, 0], [1, 0], [1, 1], [0, 1]]), area: Math.abs(ar / 2) });
+      });
+    });
+    return out;
+  }
   function roomOutline(rig, il, ids) {
     il = getIl(il); var out = [];
     if (!il || !il.room || !lastVP || !ids || !ids.length) return out;
@@ -653,7 +736,7 @@
   function readPixel(x, y) { var px = new Uint8Array(4); if (!gl) return null; gl.readPixels(x, cv.height - 1 - y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); return Array.prototype.slice.call(px); }
 
   root.IllusionGL = {
-    draw: draw, drawStage: drawStage, stageFaces: stageFaces, pickFace: pickFace, roomPick: roomPick, roomFloorPoint: roomFloorPoint, roomOutline: roomOutline, faceTexture: faceTexture, hasGl: function () { return !!ensureGl(); }, status: status, mediaStatus: mediaStatus,
+    draw: draw, drawStage: drawStage, stageFaces: stageFaces, pickFace: pickFace, roomPick: roomPick, roomFloorPoint: roomFloorPoint, roomOutline: roomOutline, layerPlacement: layerPlacement, faceTexture: faceTexture, hasGl: function () { return !!ensureGl(); }, status: status, mediaStatus: mediaStatus,
     setStatusHandler: function (fn) { onStatus = fn; }, readPixel: readPixel, sizeFor: sizeFor, _renderFace: function (r, il, ill, w, h) { if (!ensureGl()) return null; return renderFaceGL(r, getIl(il), ill, w, h); },
     _cv: function () { return cv; }, _forceLoss: function () { if (gl) { var e = gl.getExtension('WEBGL_lose_context'); if (e) e.loseContext(); } }
   };

@@ -6,7 +6,7 @@
   var C = root.IllusionCore, G = root.IllusionGL, T = root.IllusionTimeline, Seq = root.Sequence;
   var H = null, sec = null;
   var PRESETS_KEY = 'lenzi-illusion-presets';
-  var S = { il: null, assetId: null, view: 'audience', orbit: { yaw: 30, pitch: 22, dist: 90 }, playing: true, t0: 0, tFree: 0, dur: 8, quick: true, msg: '', cv: null, raf: 0, lastSel: null, open: { ilusao: true, alvo: true, prof: true, sala: true, facil: true, vista: true, prof2: true, r3d: true, catalogo: true }, adv: false, faceIl: {} };
+  var S = { il: null, assetId: null, view: 'audience', orbit: { yaw: 30, pitch: 22, dist: 90 }, playing: true, t0: 0, tFree: 0, dur: 8, quick: true, msg: '', cv: null, raf: 0, lastSel: null, open: { ilusao: true, alvo: true, prof: true, sala: true, facil: true, vista: true, prof2: true, r3d: true, catalogo: true, montar: true }, adv: false, faceIl: {} };
   try { S.adv = localStorage.getItem('lenzi-il-adv') === '1'; } catch (e) {}
 
   var CSS_SIMS = '.il-tabs{display:flex;gap:4px;flex-wrap:wrap}.il-tabs button{flex:1 1 auto;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:transparent;color:inherit;font:inherit;cursor:pointer}.il-tabs button.on{background:var(--accent);color:#fff;border-color:var(--accent)}' +
@@ -319,6 +319,53 @@
       d.appendChild(btn('Soltar', function () { S.selId = null; render(); }, null, 'il-sel-off'));
     }
     return d;
+  }
+  // ---------- Montar no cubo: cada camada da sala vira uma superfície solta, com 4 cantos, para encaixar a olho no cubo físico ----------
+  function unitToQuad(q) {
+    var x0 = q[0][0], y0 = q[0][1], x1 = q[1][0], y1 = q[1][1], x2 = q[2][0], y2 = q[2][1], x3 = q[3][0], y3 = q[3][1];
+    var dx1 = x1 - x2, dx2 = x3 - x2, dx3 = x0 - x1 + x2 - x3, dy1 = y1 - y2, dy2 = y3 - y2, dy3 = y0 - y1 + y2 - y3, g = 0, h = 0, den = dx1 * dy2 - dx2 * dy1;
+    if ((Math.abs(dx3) > 1e-12 || Math.abs(dy3) > 1e-12) && Math.abs(den) > 1e-12) { g = (dx3 * dy2 - dx2 * dy3) / den; h = (dx1 * dy3 - dx3 * dy1) / den; }
+    var a = x1 - x0 + g * x1, b = x3 - x0 + h * x3, d = y1 - y0 + g * y1, e = y3 - y0 + h * y3;
+    return function (u, v) { var w = g * u + h * v + 1; return [(a * u + b * v + x0) / w, (d * u + e * v + y0) / w]; };
+  }
+  function montarLabel(id) {
+    if (id.indexOf('wall:') === 0) { var k = id.slice(5); return k === 'floor' ? 'Piso' : (k === 'back' ? 'Parede de trás' : (k === 'right' ? 'Parede da direita' : (k === 'left' ? 'Parede da esquerda' : 'Teto'))); }
+    var nm = 'Personagem'; (S.il.room.sprites || []).forEach(function (q) { if ('sp:' + q.id === id) nm = q.name || nm; }); return nm;
+  }
+  function montar() {
+    var st0 = stage(), cu = C.cubeById(st0, S.il.target.cube); if (!cu) return;
+    var P = G.layerPlacement(st0, S.il).filter(function (p) { return p.media && (p.media.src || p.media.path); });
+    function surfOf(face) { var k = cu.faces[face], r = null; H.surfaces().forEach(function (z) { if (z.s.key === k) r = z.s; }); return r; }
+    P = P.filter(function (p) { return !!surfOf(p.face); });
+    if (!P.length) { S.msg = 'Não achei camadas com imagem em faces que tenham superfície. Coloque imagens nas paredes e no piso e ligue as faces a superfícies.'; render(); return; }
+    P.sort(function (a, b) { return (a.sprite ? 1 : 0) - (b.sprite ? 1 : 0); });          // personagens por cima
+    H.checkpoint('il-montar');
+    var faceSurfs = {}; S.il.target.faces.forEach(function (g) { var fs = surfOf(g); if (fs) faceSurfs[fs.key] = fs; });
+    var sq = seq(), dur = Math.max(S.dur || 8, sq.duration || 8), made = [], perId = {};
+    P.forEach(function (p) { perId[p.id] = (perId[p.id] || 0) + 1; });
+    P.forEach(function (p) {
+      var hom = unitToQuad(surfOf(p.face).q), q = p.q.map(function (z) { return hom(z[0], z[1]); });
+      var nm = montarLabel(p.id) + (perId[p.id] > 1 ? ' (' + C.FACE_LABEL[p.face] + ')' : '');
+      var ns = H.newSurface(q, nm, 1600, 900);
+      ns.mask = p.mask.map(function (z) { return [z[0], z[1]]; });
+      var tr = Seq.addTrack(sq, 'video', ns.key, ns.name);
+      var a = Seq.addAsset(sq, { kind: 'img', name: p.media.name || ns.name, path: p.media.path || null });
+      if (p.media.src) a.src = p.media.src;
+      var c = Seq.addClip(sq, tr.id, a, 0, dur); if (c) c.fit = 'fill';
+      ns.pristine = false; made.push(ns);
+    });
+    Object.keys(faceSurfs).forEach(function (k) { faceSurfs[k].visible = false; });
+    try { H.setOn(true); } catch (e) {}
+    H.syncClock(); H.renderAll();
+    S.montou = made.map(function (z) { return z.key; });
+    S.msg = 'Montei ' + made.length + ' peças (' + made.map(function (z) { return z.name; }).join(', ') + '). A sala 3D das faces ficou escondida. Na tela grande, escolha uma peça e arraste os 4 pontos até encaixar no cubo (Calibração). Distorcer e Cortar ajustam o resto. Desfazer volta tudo.';
+    render();
+  }
+  function secMontar() {
+    var b = box('montar', 'Montar no cubo (camadas soltas)');
+    b.appendChild(el('p', 'il-note', 'Transforma o piso, as paredes e o personagem em camadas separadas, cada uma com 4 pontos na tela grande. Você encaixa cada uma no cubo real com Calibração, Distorcer e Cortar. A sala 3D das faces fica escondida.'));
+    b.appendChild(btn('Montar no cubo', montar, 'primary', 'il-montar'));
+    return b;
   }
   function secCatalogo() {
     var b = box('catalogo', 'Catálogo: escolha e clique no cubo');
@@ -1020,7 +1067,7 @@
     if (S.assetId) ar2.appendChild(btn(easy ? 'Tirar da face' : 'Desfazer aplicação', function () { var asset = S.assetId; H.checkpoint('il-remove'); T.removeAll(seq(), asset); S.assetId = null; H.syncClock(); H.renderAll(); S.msg = 'Ilusão removida da timeline. Ela voltou a ser rascunho.'; render(); }, null, 'il-remove'));
     S._ar2 = ar2;
     if (!easy) w.appendChild(ar2);
-    (easy ? [secCatalogo, secEasy, secEasy3d] : [secIllusion, secTarget].concat(S.il.preset === 'room-builder' ? [secRoom] : [], [secGeometry, secParams, secCamera, secLight, secMaterial, secAnim, secQuality, secPresets])).forEach(function (f) { w.appendChild(f()); });
+    (easy ? [secCatalogo, secMontar, secEasy, secEasy3d] : [secIllusion, secTarget].concat(S.il.preset === 'room-builder' ? [secRoom] : [], [secGeometry, secParams, secCamera, secLight, secMaterial, secAnim, secQuality, secPresets])).forEach(function (f) { w.appendChild(f()); });
     var al = el('label', 'il-note'), ac = el('input'); ac.type = 'checkbox'; ac.id = 'il-adv'; ac.checked = S.adv;
     ac.addEventListener('change', function () { S.adv = ac.checked; try { localStorage.setItem('lenzi-il-adv', S.adv ? '1' : '0'); } catch (e) {} render(); });
     al.appendChild(ac); al.appendChild(document.createTextNode(' Opções avançadas (para quem entende do assunto)')); w.appendChild(al);

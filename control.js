@@ -2534,6 +2534,12 @@
         return out;
       },
       currentSurface: sel,
+      // Cria uma superfície vazia nova (4 cantos q em frações 0..1). Sem desfazer próprio: quem chama faz o checkpoint e o renderAll.
+      newSurface: function (q, name, w, h) {
+        var g1 = gridItem(state.surfaces.length);
+        var s = mk({ name: name || 'Camada', tag: 'SUPERFÍCIE', type: 'box', w: w || 1600, h: h || 900, q: q.map(function (p) { return [p[0], p[1]]; }), extras: g1 ? [g1] : [], selItem: g1 ? g1.id : null });
+        state.surfaces.push(s); state.sel = s.id; return s;
+      },
       hitSurface: hitSurface,
       selectKey: function (key) {
         var hit = null;

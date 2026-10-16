@@ -191,6 +191,11 @@ Na aba **3D** agora abre direto o modo fácil:
 3. **Paredes e objetos**: marque Fundo, Parede esquerda, Parede direita, Chão e Teto, escolha cor e imagem ou GIF de cada uma, e adicione objetos (um bichinho em GIF, por exemplo).
 Depois, **Aplicar na Timeline**. Os tipos de ilusão, câmera, luz e geometria do palco ficam em **Mostrar opções avançadas** (no fim do painel). A escolha fica guardada.
 
+### 1.0.23
+
+- Montar no cubo: no painel 3D, o botão "Montar no cubo" transforma o piso, as paredes e o personagem em peças soltas, uma por face onde aparecem, cada uma com seus 4 pontos na tela grande. Cada peça já nasce cortada só na parte que aparece na face. Você encaixa cada uma no cubo real com Calibração, Distorcer e Cortar. A sala 3D das faces fica escondida; Desfazer volta tudo.
+- Não testado em Mac real, projetor ou cubo físico.
+
 ### 1.0.22
 
 - Distorcer cantos por camada: em cada parede ou piso, "Mover, tamanho, girar e distorcer a imagem" tem sliders para puxar cada canto da imagem, sem mexer nas outras camadas. Botão "Tirar a distorção".
