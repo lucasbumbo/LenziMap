@@ -720,6 +720,7 @@
     al.appendChild(ac); al.appendChild(document.createTextNode(' Opções avançadas (para quem entende do assunto)')); w.appendChild(al);
     if (!S.adv && S.il.preset !== 'room-builder') { var back = el('div', 'il-row'); back.appendChild(el('span', 'il-note', 'Esta ilusão não é a Sala de paredes.')); back.appendChild(btn('Voltar para a Sala de paredes', function () { newIllusion('room-builder'); render(); }, null, 'il-back-room')); w.insertBefore(back, w.firstChild.nextSibling); }
     sec.appendChild(w);
+    drawRoomCv();
     if (sec.parentNode) sec.parentNode.scrollTop = scroll;
     // câmera livre: arrastar gira, rolar aproxima
     var drag = null;
