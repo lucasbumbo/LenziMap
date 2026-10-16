@@ -545,10 +545,24 @@
     var P = poly.map(function (z) { return [z[0], z[1]]; }), i;
     P = P.filter(function (z, k) { var o = P[(k + P.length - 1) % P.length]; return Math.hypot(z[0] - o[0], z[1] - o[1]) > 0.015; });
     if (area(P) * area(orig) < 0) P.reverse();
-    while (P.length > 4) {                                                   // tira o vértice que menos contribui
-      var bi = 0, ba = Infinity;
-      for (i = 0; i < P.length; i++) { var a = P[(i + P.length - 1) % P.length], b = P[i], c = P[(i + 1) % P.length], ar = Math.abs((b[0] - a[0]) * (c[1] - a[1]) - (c[0] - a[0]) * (b[1] - a[1])); if (ar < ba) { ba = ar; bi = i; } }
-      P.splice(bi, 1);
+    while (P.length > 4) {                                                   // troca a aresta que menos área acrescenta pelo cruzamento das vizinhas (cobre um pouco a mais, nunca deixa fresta)
+      var bi = -1, ba = Infinity, bp = null, m = P.length;
+      for (i = 0; i < m; i++) {
+        var p0 = P[(i + m - 1) % m], p1 = P[i], p2 = P[(i + 1) % m], p3 = P[(i + 2) % m];
+        var d1x = p1[0] - p0[0], d1y = p1[1] - p0[1], d2x = p2[0] - p3[0], d2y = p2[1] - p3[1], den = d1x * d2y - d1y * d2x;
+        if (Math.abs(den) < 1e-12) continue;
+        var tt = ((p3[0] - p0[0]) * d2y - (p3[1] - p0[1]) * d2x) / den;
+        if (tt < 0) continue;
+        var X = [p0[0] + d1x * tt, p0[1] + d1y * tt], add = Math.abs(((p1[0] - X[0]) * (p2[1] - X[1]) - (p2[0] - X[0]) * (p1[1] - X[1])) / 2);
+        if (add < ba) { ba = add; bi = i; bp = X; }
+      }
+      if (bi < 0) {                                                          // sem cruzamento válido: tira o vértice que menos contribui
+        var bj = 0, bb = Infinity;
+        for (i = 0; i < m; i++) { var a0 = P[(i + m - 1) % m], b0 = P[i], c0 = P[(i + 1) % m], ar0 = Math.abs((b0[0] - a0[0]) * (c0[1] - a0[1]) - (c0[0] - a0[0]) * (b0[1] - a0[1])); if (ar0 < bb) { bb = ar0; bj = i; } }
+        P.splice(bj, 1);
+      } else {
+        var j2 = (bi + 1) % m; P[bi] = bp; P.splice(j2, 1);
+      }
     }
     while (P.length < 4) {                                                   // divide a maior aresta ao meio
       var li = 0, bl = -1;
@@ -575,6 +589,7 @@
   // Para "Montar no cubo": cada camada da sala (parede, piso, personagem) em cada face onde ela aparece.
   // Devolve [{id, sprite, media, face, q:[[s,t] x4], mask:[[u,v] x4]}]. q = onde a imagem INTEIRA cairia no plano da janela da face (cima-esq, cima-dir, baixo-dir, baixo-esq);
   // mask = a parte dela que realmente aparece dentro da janela, em coordenadas da imagem (0..1). (s,t) vai de 0 a 1 na textura da face (t=0 é o topo).
+  var SEAM = 1.015;
   function layerPlacement(rig, il) {
     il = getIl(il); var out = [], V = C.v; if (!il || !il.room) return out;
     var cu = C.cubeById(rig, il.target.cube); if (!cu) return out;
@@ -600,8 +615,9 @@
         var poly = clipUnit(img.map(function (z) { return [z[0], z[1]]; })); if (poly.length < 3) return;
         var ar = 0; for (var k = 0; k < poly.length; k++) { var u2 = poly[k], v2 = poly[(k + 1) % poly.length]; ar += u2[0] * v2[1] - v2[0] * u2[1]; }
         if (Math.abs(ar / 2) < 0.02) return;                               // quase nada dessa camada aparece nesta face
+        var pc = poly.reduce(function (a, z) { return [a[0] + z[0] / poly.length, a[1] + z[1] / poly.length]; }, [0, 0]); poly = poly.map(function (z) { return [pc[0] + (z[0] - pc[0]) * SEAM, pc[1] + (z[1] - pc[1]) * SEAM]; });
         var hm = homUnit(img), uvp = poly.map(function (z) { var w = homInv(hm, z[0], z[1]); return [Math.max(0, Math.min(1, w[0])), Math.max(0, Math.min(1, w[1]))]; });
-        out.push({ id: id, sprite: !!q.sprite, media: q.m, face: fc, q: img, mask: quadFromPoly(uvp, [[0, 0], [1, 0], [1, 1], [0, 1]]), area: Math.abs(ar / 2) });
+        out.push({ id: id, sprite: !!q.sprite, media: q.m, face: fc, q: img, mask: quadFromPoly(uvp, [[0, 0], [1, 0], [1, 1], [0, 1]]).map(function (z) { return [Math.max(0, Math.min(1, z[0])), Math.max(0, Math.min(1, z[1]))]; }), area: Math.abs(ar / 2) });
       });
     });
     return out;
