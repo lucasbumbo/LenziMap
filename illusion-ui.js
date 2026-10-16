@@ -149,6 +149,8 @@
   }
   // cria uma superfície nova clicando no botão "+ Nova superfície" do app (pra criança não precisar procurar)
   function makeSurface() { var nb = document.getElementById('btn-newbox'); if (!nb) return false; nb.click(); return true; }
+  // a face só conta como ligada se a superfície ainda existe (projeto antigo pode ter ligação velha)
+  function faceBound(cu, g) { var k = cu && cu.faces[g]; if (!k) return false; var ok = false; H.surfaces().forEach(function (z) { if (z.s.key === k) ok = true; }); return ok; }
   function freeSurfaceKey() {
     var used = {}; stage().cubes.forEach(function (c) { C.FACES.forEach(function (g) { if (c.faces[g]) used[c.faces[g]] = 1; }); });
     var free = H.surfaces().map(function (z) { return z.s.key; }).filter(function (kk) { return kk && !used[kk]; });
@@ -165,7 +167,7 @@
     else { S.il.room.join = null; S.il.target.faces = [f0]; S.msg = 'Face ' + C.FACE_LABEL[f0] + ' sozinha de novo. Aperte Aplicar na Timeline.'; }
     stashFace();
     var miss = [];
-    S.il.target.faces.forEach(function (g) { if (!C.cubeById(stage(), cube.id).faces[g]) { var kk = freeSurfaceKey(); if (kk) bindSurface(cube.id, g, kk); else miss.push(C.FACE_LABEL[g]); } });
+    S.il.target.faces.forEach(function (g) { if (!faceBound(C.cubeById(stage(), cube.id), g)) { var kk = freeSurfaceKey(); if (kk) bindSurface(cube.id, g, kk); else miss.push(C.FACE_LABEL[g]); } });
     if (miss.length) S.msg += ' Falta tela livre para: ' + miss.join(', ') + '.';
     render();
   }
@@ -269,14 +271,14 @@
     var modRow = el('div', 'il-row');
     modRow.appendChild(btn('🐭 Sala do rato', function () {
       appLibImages(function (lib) {
-        var lab = libFind(lib, 'Parede - Labirinto'), pis = libFind(lib, 'Piso - Xadrez preto e branco'), teto = libFind(lib, 'Teto - Ondas'), rato = libFind(lib, 'Personagem - Rato em pe');
-        if (!lab || !pis || !teto || !rato) { S.msg = 'Não achei as imagens da Sala do rato na biblioteca do app.'; render(); return; }
+        var lab = libFind(lib, 'Parede - Labirinto'), pis = libFind(lib, 'Piso - Xadrez preto e branco'), rato = libFind(lib, 'Personagem - Rato em pe');
+        if (!lab || !pis || !rato) { S.msg = 'Não achei as imagens da Sala do rato na biblioteca do app.'; render(); return; }
         var ringM = ['front', 'right', 'back', 'left'], fm = ringM.indexOf(curFace());
         editStage(function (s2) { var c = C.cubeById(s2, S.il.target.cube) || s2.cubes[0]; c.rotY = -45; s2.viewer.pos = [0, c.pos[1] + 2, Math.max(40, s2.viewer.pos[2] || 130)]; }, 'il-view');
         if (fm >= 0) setJoin(ringM[fm] + '+' + ringM[(fm + 1) % 4]);
         var W = S.il.room.walls;
         C.ROOM_WALLS.forEach(function (w2) { W[w2].on = w2 !== 'left'; });
-        W.back.media = lab; W.right.media = lab; W.floor.media = pis; W.ceiling.media = teto;
+        W.back.media = lab; W.right.media = lab; W.floor.media = pis; W.ceiling.media = lab;
         S.il.params.depth = 24; S.sala = 'quarto';
         S.il.room.sprites = [{ id: 'rato1', name: 'Rato', x: -4, y: -2, z: -4, size: 12, media: rato, fx: '' }];
         S.msg = 'Sala do rato montada. Quando gostar da prévia, clique em Colocar na face.';
@@ -751,7 +753,7 @@
     // modo fácil: se a face escolhida ainda não tem tela, liga uma livre sozinho
     if (!S.adv && S.il.preset === 'room-builder') {
       var st0 = stage(), cu0 = C.cubeById(st0, S.il.target.cube), miss0 = [];
-      S.il.target.faces.forEach(function (g) { if (cu0 && !cu0.faces[g]) { var kk = freeSurfaceKey(); if (kk) bindSurface(cu0.id, g, kk); else miss0.push(C.FACE_LABEL[g]); } });
+      S.il.target.faces.forEach(function (g) { if (cu0 && !faceBound(cu0, g)) { var kk = freeSurfaceKey(); if (kk) bindSurface(cu0.id, g, kk); else miss0.push(C.FACE_LABEL[g]); } });
       if (miss0.length && !S.retry && makeSurface()) { S.retry = true; setTimeout(function () { S.retry = false; applyNow(); }, 350); return; }
       if (miss0.length) { S.msg = 'Falta uma superfície para a face ' + miss0.join(', ') + '. Clique em + Nova superfície (no topo), arraste os 4 cantos até a face do cubo e clique em Colocar na face de novo.'; render(); return; }
     }

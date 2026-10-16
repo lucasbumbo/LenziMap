@@ -191,6 +191,10 @@ Na aba **3D** agora abre direto o modo fácil:
 3. **Paredes e objetos**: marque Fundo, Parede esquerda, Parede direita, Chão e Teto, escolha cor e imagem ou GIF de cada uma, e adicione objetos (um bichinho em GIF, por exemplo).
 Depois, **Aplicar na Timeline**. Os tipos de ilusão, câmera, luz e geometria do palco ficam em **Mostrar opções avançadas** (no fim do painel). A escolha fica guardada.
 
+### 1.0.18
+- Sala do rato: o teto agora usa o mesmo labirinto das paredes (antes era um teto de ondas que não combinava).
+- Corrigido: projeto antigo com a face ligada a uma superfície que já não existe. Ao Colocar na face, o app liga uma superfície livre sozinho, e a sala na quina entra nas duas faces.
+
 ### 1.0.17
 - Novo botão "Sala do rato" no passo 2 do painel 3D: monta de uma vez a sala na quina com paredes de labirinto, chão xadrez preto e branco, teto de ondas e o rato em pé na frente da parede.
 - Novo seletor "Personagem na frente da parede": adiciona um personagem da biblioteca (arquivos "Personagem - ..."). "Tirar personagens" remove todos.
