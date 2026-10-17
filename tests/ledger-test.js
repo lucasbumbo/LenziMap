@@ -33,7 +33,7 @@ L.move(id, 'APROVADO', 'auditor-1'); ok('auditor independente aprova com portao 
 erra('APROVADO e final', () => L.move(id, 'EM_DESENVOLVIMENTO', 'dev-1'), /proibida/);
 ok('historico registra todas as mudancas', L.load().tasks[0].historico.length === 5);
 const c = L.add('Auditor que mexeu', 'auditor-9'); L.move(c, 'EM_DESENVOLVIMENTO', 'auditor-9'); L.move(c, 'EM_TESTE', 'auditor-9'); L.evid(c, 'tests/ledger-test.js'); L.move(c, 'EM_AUDITORIA', 'auditor-9');
-erra('auditor que mexeu na tarefa nao a aprova', () => L.move(c, 'APROVADO', 'auditor-9'), /dono|mexeu/);
+erra('auditor que mexeu na tarefa nao a aprova', () => L.move(c, 'APROVADO', 'auditor-9'), /proprio|mexeu/);
 const b = L.add('Outra', 'dev-2'); erra('bloqueio exige motivo', () => L.move(b, 'BLOQUEADO', 'dev-2'), /motivo/);
 L.uso(b, 'dev-2', 60); ok('orcamento ok abaixo do limite', L.orcamento(b).ok);
 L.uso(b, 'dev-2', 50); ok('orcamento estoura ao passar do limite da tarefa', !L.orcamento(b).ok);
