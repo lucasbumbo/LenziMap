@@ -191,6 +191,12 @@ Na aba **3D** agora abre direto o modo fácil:
 3. **Paredes e objetos**: marque Fundo, Parede esquerda, Parede direita, Chão e Teto, escolha cor e imagem ou GIF de cada uma, e adicione objetos (um bichinho em GIF, por exemplo).
 Depois, **Aplicar na Timeline**. Os tipos de ilusão, câmera, luz e geometria do palco ficam em **Mostrar opções avançadas** (no fim do painel). A escolha fica guardada.
 
+### 1.0.25
+
+- Saídas de emergência: menu novo "Projeção" com "Fechar a projeção" (Ctrl+Option+W) e "Sair do LenziMap" (Ctrl+Option+Q). Os dois atalhos funcionam mesmo com a projeção cobrindo a tela e sem foco no app.
+- Teste no Electron real (tests/electron-atalhos.js): menu, atalhos registrados, fechar a projeção e sair.
+- Não testado em Mac real, projetor ou cubo físico.
+
 ### 1.0.24
 
 - Montar no cubo: as peças agora se sobrepõem um pouco nas emendas entre faces, para não ficar linha preta fina entre elas.

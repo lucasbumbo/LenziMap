@@ -1,4 +1,4 @@
-const { app, BrowserWindow, screen, ipcMain, dialog, session, desktopCapturer, systemPreferences, Menu } = require('electron');
+const { app, BrowserWindow, screen, ipcMain, dialog, session, desktopCapturer, systemPreferences, Menu, globalShortcut } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const updater = require('./updater');
@@ -38,6 +38,7 @@ function buildMenu() {
     { label: 'File', submenu: [isMac ? { role: 'close' } : { role: 'quit' }] },
     { label: 'Edit', submenu: [{ role: 'undo' }, { role: 'redo' }, { type: 'separator' }, { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' }] },
     { label: 'View', submenu: [{ role: 'reload' }, { role: 'toggleDevTools' }, { type: 'separator' }, { role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' }, { type: 'separator' }, { role: 'togglefullscreen' }] },
+    { label: 'Projeção', submenu: [{ label: 'Fechar a projeção', accelerator: 'Control+Alt+W', click: () => closeOutput() }, { label: 'Sair do LenziMap', accelerator: 'Control+Alt+Q', click: () => app.quit() }] },
     { label: 'Window', submenu: [{ role: 'minimize' }, { role: 'zoom' }, ...(isMac ? [{ type: 'separator' }, { role: 'front' }] : [{ role: 'close' }])] },
     { role: 'help', submenu: [...check()] }
   ];
@@ -66,6 +67,8 @@ app.whenReady().then(() => {
     }).catch(() => callback({}));
   });
   buildMenu();
+  // Saídas de emergência que funcionam mesmo com a projeção cobrindo a tela e sem foco no app
+  try { globalShortcut.register('Control+Alt+W', () => closeOutput()); globalShortcut.register('Control+Alt+Q', () => app.quit()); } catch (e) { console.error('atalhos', e); }
   createControl();
   // Atualizações: assíncrono, nunca bloqueia a abertura e nunca age com a saída de projeção aberta.
   try { aiMain.init(); } catch (e) { console.error('ai', e); }
@@ -76,6 +79,7 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => app.quit());
+app.on('will-quit', () => { try { globalShortcut.unregisterAll(); } catch (e) {} });
 
 ipcMain.handle('displays', () => {
   const primary = screen.getPrimaryDisplay().id;
