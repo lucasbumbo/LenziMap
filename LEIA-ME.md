@@ -191,6 +191,11 @@ Na aba **3D** agora abre direto o modo fácil:
 3. **Paredes e objetos**: marque Fundo, Parede esquerda, Parede direita, Chão e Teto, escolha cor e imagem ou GIF de cada uma, e adicione objetos (um bichinho em GIF, por exemplo).
 Depois, **Aplicar na Timeline**. Os tipos de ilusão, câmera, luz e geometria do palco ficam em **Mostrar opções avançadas** (no fim do painel). A escolha fica guardada.
 
+### 1.0.27
+- **Montar cubo em um clique:** na aba 3D, "Montar cubo (3 faces, pronto)". Cria e liga as faces Frente, Direita e Topo, deixa o cubo na quina (público na diagonal, 2 faces juntas), monta a sala do rato e põe um teto no topo. Os cantos das faces novas já vêm num ponto de partida; você só ajusta no cubo real. Clicar de novo não cria faces a mais e não mexe nas que você já calibrou.
+- O aviso "(vazia)" não aparece mais em superfície que já tem faixa na timeline.
+- Limites: o ponto de partida dos cantos supõe um projetor de zoom médio apontado para o cubo, então o ajuste fino é seu. Não testado no Mac, no projetor nem no cubo físico.
+
 ### 1.0.26
 
 - Máscaras extras: em Superfície selecionada, **+ Máscara** cria uma máscara a mais (retângulo, círculo, triângulo, losango, hexágono ou estrela). Cada superfície pode ter várias. Cada uma tem olho (liga e desliga), **Inverter** (só o interior aparece), **feather** (borda suave) e **Apagar**.

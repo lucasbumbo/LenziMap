@@ -523,6 +523,7 @@
     });
     state.surfaces.forEach(function (c) {
       if (c.extras.length || !showOf(c)) return;
+      if (typeof tl !== 'undefined' && tl && tl.on && tl.seq && tl.seq.tracks.some(function (t) { return t.surfaceId === c.key && t.clips && t.clips.length; })) return;   // tem faixa na timeline: não está vazia
       var P = px(c), cx = 0, cy = 0;
       P.forEach(function (p) { cx += p[0] / P.length; cy += p[1] / P.length; });
       var t = svgEl('text', { x: cx, y: cy, 'class': 'q-empty' });

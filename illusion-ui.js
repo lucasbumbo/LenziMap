@@ -361,6 +361,58 @@
     S.msg = 'Montei ' + made.length + ' peças (' + made.map(function (z) { return z.name; }).join(', ') + '). A sala 3D das faces ficou escondida. Na tela grande, escolha uma peça e arraste os 4 pontos até encaixar no cubo (Calibração). Distorcer e Cortar ajustam o resto. Desfazer volta tudo.';
     render();
   }
+
+  // Botão único: cria e liga as 3 faces (frente, direita, topo), deixa o cubo na quina em modo 2 faces, monta a sala pronta e aplica.
+  // Só cria superfícies que faltam e só posiciona as NOVAS (ponto de partida); calibração que você já fez não é mexida.
+  function startQuads(cube, stg) {
+    var PW = 1920, PH = 1080, P = stg.projector.pos, T0 = cube.pos, fov = 14 * Math.PI / 180;
+    var f = [T0[0] - P[0], T0[1] - P[1], T0[2] - P[2]], l = Math.sqrt(f[0] * f[0] + f[1] * f[1] + f[2] * f[2]); f = [f[0] / l, f[1] / l, f[2] / l];
+    var r = [f[1] * 0 - f[2] * 1, f[2] * 0 - f[0] * 0, f[0] * 1 - f[1] * 0]; var rl = Math.sqrt(r[0] * r[0] + r[2] * r[2]) || 1; r = [r[0] / rl, 0, r[2] / rl];
+    var u = [r[1] * f[2] - r[2] * f[1], r[2] * f[0] - r[0] * f[2], r[0] * f[1] - r[1] * f[0]], fl = (PH / 2) / Math.tan(fov / 2);
+    function pj(X) { var d = [X[0] - P[0], X[1] - P[1], X[2] - P[2]], z = d[0] * f[0] + d[1] * f[1] + d[2] * f[2]; return [(PW / 2 + fl * (d[0] * r[0] + d[1] * r[1] + d[2] * r[2]) / z) / PW, (PH / 2 - fl * (d[0] * u[0] + d[1] * u[1] + d[2] * u[2]) / z) / PH]; }
+    var out = {}; ['front', 'right', 'top'].forEach(function (g) { out[g] = C.faceFrame(cube, g).corners.map(pj); });
+    return out;
+  }
+  function cuboPronto() {
+    appLibImages(function (lib) {
+      var lab = libFind(lib, 'Parede - Labirinto'), pis = libFind(lib, 'Piso - Xadrez preto e branco'), rato = libFind(lib, 'Personagem - Rato animado') || libFind(lib, 'Personagem - Rato em pe'), teto = libFind(lib, 'Teto - Ondas');
+      if (!lab || !pis || !rato) { S.msg = 'Não achei as imagens da sala pronta na biblioteca do app.'; render(); return; }
+      var cube = C.cubeById(stage(), S.il.target.cube) || stage().cubes[0], made = [];
+      histGroup(function () {
+        // 1) cubo na quina, olho um pouco acima do centro, 2 faces juntas
+        editStage(function (s2) { var c = C.cubeById(s2, cube.id) || s2.cubes[0]; c.rotY = -45; s2.viewer.pos = [0, c.pos[1] + 14, Math.max(60, s2.viewer.pos[2] || 100)]; }, 'il-view');
+        S.il.target.cube = cube.id; S.curFace = 'front';
+        // 2) superfícies das 3 faces (usa a superfície nova e intocada do projeto, se houver; senão cria)
+        var names = { front: 'Cubo · Frente', right: 'Cubo · Direita', top: 'Cubo · Topo' }, qs = startQuads(C.cubeById(stage(), cube.id), stage());
+        ['front', 'right', 'top'].forEach(function (g) {
+          if (faceBound(C.cubeById(stage(), cube.id), g)) return;
+          var fk = freeSurfaceKey(), ns = null;
+          H.surfaces().forEach(function (z) { if (z.s.key === fk && z.s.pristine) ns = z.s; });
+          if (ns) { ns.q = qs[g].map(function (p2) { return [p2[0], p2[1]]; }); ns.name = names[g]; ns.pristine = false; }
+          else { ns = H.newSurface(qs[g], names[g], 1600, 900); ns.pristine = false; }
+          ns.extras = []; ns.selItem = null;
+          made.push(g); bindSurface(cube.id, g, ns.key);
+        });
+        setJoin('front+right');
+        // 3) sala pronta
+        var W = S.il.room.walls; C.ROOM_WALLS.forEach(function (w2) { W[w2].on = w2 !== 'left' && w2 !== 'ceiling'; });
+        W.back.media = lab; W.right.media = lab; W.floor.media = pis; S.il.params.depth = 24; S.sala = 'quarto';
+        var hh = cube.size / 2;
+        S.il.room.sprites = [{ id: 'rato1', name: 'Rato', x: -2, y: -hh + 6, z: -10, size: 12, media: rato, fx: '' }];
+        changed('il-room', true);
+        // 4) teto no topo (imagem comum, sem ilusão), se o topo ainda não tem faixa
+        var cu2 = C.cubeById(stage(), cube.id), tk = cu2 && cu2.faces.top;
+        if (teto && tk && !seq().tracks.some(function (t) { return t.type === 'video' && t.surfaceId === tk; })) {
+          var sq = seq(), tr = Seq.addTrack(sq, 'video', tk, names.top), a = Seq.addAsset(sq, { kind: 'img', name: teto.name, path: teto.path || null });
+          if (teto.src) a.src = teto.src; var c0 = Seq.addClip(sq, tr.id, a, 0, Math.max(S.dur || 8, sq.duration || 8)); if (c0) c0.fit = 'fill';
+        }
+      });
+      setModelBase();
+      applyNow();
+      S.msg = 'Cubo montado: Frente, Direita e Topo ligados' + (made.length ? ' (criei ' + made.length + ' superfície' + (made.length > 1 ? 's' : '') + ')' : '') + '. Agora, na tela grande, escolha cada face (Cubo · Frente, Direita, Topo) e arraste os 4 cantos até encaixar no cubo real. Os cantos já vêm num ponto de partida, só ajuste.';
+      render();
+    });
+  }
   function secMontar() {
     var b = box('montar', 'Montar no cubo (camadas soltas)');
     b.appendChild(el('p', 'il-note', 'Transforma o piso, as paredes e o personagem em camadas separadas, cada uma com 4 pontos na tela grande. Você encaixa cada uma no cubo real com Calibração, Distorcer e Cortar. A sala 3D das faces fica escondida.'));
@@ -458,6 +510,7 @@
     // modelo pronto + personagens (imagens que vêm com o app)
     var modBox = el('div'); modBox.appendChild(el('p', 'il-note il-step', 'Modelo pronto'));
     var modRow = el('div', 'il-row');
+    modRow.appendChild(btn('🧊 Montar cubo (3 faces, pronto)', cuboPronto, 'primary', 'il-cubo-pronto'));
     modRow.appendChild(btn('🐭 Sala do rato', function () {
       appLibImages(function (lib) {
         var lab = libFind(lib, 'Parede - Labirinto'), pis = libFind(lib, 'Piso - Xadrez preto e branco'), rato = libFind(lib, 'Personagem - Rato animado') || libFind(lib, 'Personagem - Rato em pe');
