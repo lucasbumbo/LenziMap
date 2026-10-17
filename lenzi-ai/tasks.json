@@ -1,0 +1,19 @@
+{
+  "tasks": [
+    {
+      "id": "T001",
+      "titulo": "Fundacao LENZI AI",
+      "dono": "diretor",
+      "estado": "PENDENTE",
+      "evidencias": [],
+      "historico": [
+        {
+          "em": "2026-10-17T18:12:44.441Z",
+          "de": null,
+          "para": "PENDENTE",
+          "por": "diretor"
+        }
+      ]
+    }
+  ]
+}
