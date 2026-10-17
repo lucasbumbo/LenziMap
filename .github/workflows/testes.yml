@@ -1,0 +1,21 @@
+name: Testes do LenziMap
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  portao:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci --ignore-scripts
+      - name: Portao rapido (sintaxe, registro de tarefas, testes de nucleo)
+        run: node lenzi-ai/gate.js
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: relatorio-portao
+          path: lenzi-ai/evidencias/gate-ultimo.json
