@@ -44,8 +44,8 @@ def render(cam,tgt,fov,W,H,ambient=0.05,lit=True):
     # aresta levemente mais clara (reflexo) e leve desfoque de câmera
     im=Image.fromarray((np.clip(img,0,1)**(1/1.15)*255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(0.8))
     a=np.asarray(im).astype(float);a+=np.random.RandomState(2).normal(0,2.2,a.shape);return Image.fromarray(np.clip(a,0,255).astype(np.uint8))
-P=sys.argv[3];V=np.array(cfg['viewer']);T=CUBE+np.array([0,0,0])
-render(V,T+np.array([0,1,0]),np.radians(cfg['vfov']),1280,960).save(P+'foto-publico.png')
-render(np.array([V[0]+cfg['lado'][0],V[1]+cfg['lado'][1],V[2]-cfg['lado'][2]]),T+np.array([0,1,0]),np.radians(cfg['vfov']),1280,960).save(P+'foto-andando-pro-lado.png')
-render(V,T+np.array([0,1,0]),np.radians(cfg['vfov']),1280,960,lit=False).save(P+'foto-cubo-apagado.png')
-Image.fromarray((out*255).astype(np.uint8)).save(P+'saida-projetor.png')
+P=sys.argv[3];PRE=sys.argv[4] if len(sys.argv)>4 else '';V=np.array(cfg['viewer']);T=CUBE+np.array([0,0,0])
+render(V,T+np.array([0,1,0]),np.radians(cfg['vfov']),1280,960).save(P+PRE+'foto-publico.png')
+render(np.array([V[0]+cfg['lado'][0],V[1]+cfg['lado'][1],V[2]-cfg['lado'][2]]),T+np.array([0,1,0]),np.radians(cfg['vfov']),1280,960).save(P+PRE+'foto-andando-pro-lado.png')
+render(V,T+np.array([0,1,0]),np.radians(cfg['vfov']),1280,960,lit=False).save(P+PRE+'foto-cubo-apagado.png')
+Image.fromarray((out*255).astype(np.uint8)).save(P+PRE+'saida-projetor.png')

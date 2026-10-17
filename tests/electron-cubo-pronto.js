@@ -45,6 +45,14 @@ for q in g:
 print(*res)`],{encoding:'utf8'}).stdout.trim().split(' ').map(Number);
  console.log('brilho no centro de cada face',py.join(' '));ok(py.length===3&&py.every(v=>v>30),'saida tem imagem nas 3 faces');
  const vaz=await win.evaluate(()=>[...document.querySelectorAll('#overlay text.q-empty')].map(t=>t.textContent));ok(vaz.length===0,'nenhum aviso falso de superficie vazia '+JSON.stringify(vaz));
+ // FRAMES (todo teste termina gerando frames para mostrar como ficou)
+ const cfg=await win.evaluate(()=>{const H=TimelineUI._h,st=H.tl.seq.stage,cu=st.cubes[0];return {pw:1920,ph:1080,proj:st.projector.pos,ptgt:cu.pos,pfov:14,cubePos:cu.pos,size:cu.size,rotY:cu.rotY,viewer:st.viewer.pos,vfov:15,lado:[16,3,8]};});
+ fs.writeFileSync(P+'cfg.json',JSON.stringify(cfg));
+ const TS=[0.2,0.6,1.0,1.4,1.8,2.2];const fr=[];
+ for(let i=0;i<TS.length;i++){await win.evaluate(t=>{TimelineUI.api.seek(t);TimelineUI.api.pause&&TimelineUI.api.pause();},TS[i]);await win.waitForTimeout(3800);
+  const f='f'+i+'-';await out.screenshot({path:P+f+'raw.png',timeout:120000}).catch(e=>console.log('falhou frame',i));
+  const r=require('child_process').spawnSync('python3',[path.join(__dirname,'amostra/cubo.py'),P+'cfg.json',P+f+'raw.png',P,f],{encoding:'utf8'});if(r.stderr)console.log(r.stderr.slice(0,300));fr.push(f);}
+ ok(fr.every(f=>fs.existsSync(P+f+'foto-publico.png')),'frames gerados ('+fr.length+')');
  // desfazer não quebra
  await win.evaluate(()=>{const b=document.getElementById('btn-undo')||[...document.querySelectorAll('button')].find(x=>x.textContent.trim()==='Desfazer');b&&b.click()});await win.waitForTimeout(1500);
  ok(errs.length===0,'sem erros de JS '+JSON.stringify(errs.slice(0,3)));
