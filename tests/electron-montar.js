@@ -21,6 +21,7 @@ await win.waitForLoadState('load');await win.waitForTimeout(2500);
  const media=await win.evaluate(()=>{const W=IllusionUI.state.il.room.walls;return {bk:W.back.media&&W.back.media.name,fl:W.floor.media&&W.floor.media.name,sp:IllusionUI.state.il.room.sprites.length}});
  console.log(JSON.stringify(media));ok(media.bk&&media.fl&&media.sp>=1,'biblioteca real do app carregou parede, piso e rato');
  await jc('#il-apply');await win.waitForTimeout(3000);
+ await win.screenshot({path:'/tmp/claude-0/prints/1-sala-3d-previa.png'}).catch(()=>{});
  // arrastar na prévia 3D do painel, com o mouse de verdade (piso, parede e rato)
  const pts=await win.evaluate(()=>{const cv=document.getElementById('il-canvas'),out={wall:null,floor:null,sp:null},st=TimelineUI._h.tl.seq.stage;
   for(let y=10;y<cv.height;y+=5)for(let x=10;x<cv.width;x+=5){const hh=IllusionGL.roomPick(st,IllusionUI.state.il,x,y);if(!hh)continue;
@@ -45,6 +46,7 @@ await win.waitForLoadState('load');await win.waitForTimeout(2500);
  await win.waitForTimeout(1200);
  const nSurf0=await win.evaluate(()=>TimelineUI._h.surfaces().length);
  await jc('#il-montar');await win.waitForTimeout(3000);
+ await win.screenshot({path:'/tmp/claude-0/prints/2-montar-no-cubo.png'}).catch(()=>{});
  const lst=await win.evaluate(()=>{const H=TimelineUI._h,sq=H.tl.seq;return H.surfaces().map(z=>z.s).map(s=>({name:s.name,vis:s.visible,mask:s.mask.map(m=>m.map(v=>+v.toFixed(2))),clips:sq.tracks.filter(t=>t.surfaceId===s.key).reduce((a,t)=>a+t.clips.length,0)}))});
  console.log(lst.map(s=>s.name+(s.vis?'':' [escondida]')).join(' | '));
  const pieces=lst.filter(s=>/^(Piso|Parede|Rato)/.test(s.name));
@@ -59,11 +61,11 @@ await win.waitForLoadState('load');await win.waitForTimeout(2500);
  const out=wins.find(w=>w!==win);
  await out.waitForFunction(()=>window.__rend&&window.__rend.player,null,{timeout:8000}).catch(()=>{});
  await win.evaluate(()=>{window.TimelineUI.api.seek(0.5);window.TimelineUI.api.play();});await win.waitForTimeout(2500);
- await out.screenshot({path:'/tmp/claude-0/el-saida.png'});
- const png=await out.screenshot();require('fs').writeFileSync('/tmp/claude-0/el-saida.png',png);
+ await out.screenshot({path:'/tmp/claude-0/prints/4-saida-projetor.png'});
+ const png=await out.screenshot();require('fs').writeFileSync('/tmp/claude-0/prints/4-saida-projetor.png',png);
  const py=require('child_process').spawnSync('python3',['-c',`
 from PIL import Image
-im=Image.open('/tmp/claude-0/el-saida.png').convert('RGB');W,H=im.size
+im=Image.open('/tmp/claude-0/prints/4-saida-projetor.png').convert('RGB');W,H=im.size
 def at(fx,fy):
     r,g,b=im.getpixel((int(fx*W),int(fy*H)));return r+g+b
 print(at(.24,.55),at(.78,.55),at(.5,.82),at(.03,.04),at(.97,.96),at(.03,.96),at(.97,.04))`]).stdout.toString().trim().split(' ').map(Number);
@@ -83,6 +85,7 @@ print(at(.24,.55),at(.78,.55),at(.5,.82),at(.03,.04),at(.97,.96),at(.03,.96),at(
  await win.waitForTimeout(600);
  const geo=await win.evaluate(()=>{const st=document.getElementById('stage'),r=st.getBoundingClientRect();const c=document.querySelector('#overlay .h-corner[data-i="0"]');const b=c.getBoundingClientRect();return {x:b.x+b.width/2,y:b.y+b.height/2}});
  await win.mouse.move(geo.x,geo.y);await win.mouse.down();await win.mouse.move(geo.x+40,geo.y+25,{steps:8});await win.mouse.up();await win.waitForTimeout(500);
+ await win.screenshot({path:'/tmp/claude-0/prints/3-canto-arrastado.png'}).catch(()=>{});
  const q2=await win.evaluate(()=>{const s=TimelineUI._h.currentSurface();return {name:s.name,q:s.q.map(p=>p.map(v=>+v.toFixed(3)))}});
  console.log(JSON.stringify(sel.q[0]),'->',JSON.stringify(q2.q[0]));
  ok(q2.name===sel.name&&(Math.abs(q2.q[0][0]-sel.q[0][0])>0.005||Math.abs(q2.q[0][1]-sel.q[0][1])>0.005),'arrastar o canto 1 do piso com o mouse move so essa peca');
