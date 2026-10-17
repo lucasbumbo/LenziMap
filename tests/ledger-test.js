@@ -13,6 +13,7 @@ erra('nao pula direto para APROVADO', () => L.move(id, 'APROVADO', 'auditor-1'),
 L.move(id, 'EM_DESENVOLVIMENTO', 'dev-1'); L.move(id, 'EM_TESTE', 'dev-1');
 erra('auditoria sem evidencia e recusada', () => L.move(id, 'EM_AUDITORIA', 'dev-1'), /evidencia/);
 erra('evidencia fora do repositorio e recusada', () => L.evid(id, '/etc/hostname'), /fora do repositorio/);
+fs.symlinkSync('/etc/hostname', path.join(__dirname, 'amostra', '.atalho-ledger')); erra('atalho para fora e recusado', () => L.evid(id, 'tests/amostra/.atalho-ledger'), /fora do repositorio/); fs.rmSync(path.join(__dirname, 'amostra', '.atalho-ledger'));
 erra('evidencia com .. e recusada', () => L.evid(id, '../../etc/hostname'), /fora do repositorio/);
 fs.writeFileSync(path.join(__dirname, 'amostra', '.prova-ledger.txt'), 'x'); L.evid(id, 'tests/amostra/.prova-ledger.txt');
 erra('evidencia inexistente e recusada', () => L.evid(id, 'nao-existe.txt'), /nao existe/);

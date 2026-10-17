@@ -8,14 +8,16 @@ const ROOT = path.resolve(__dirname, '..');
 function hashFontes() {
   const h = crypto.createHash('sha256');
   const arqs = [];
-  for (const d of ['.', 'tests']) for (const f of fs.readdirSync(path.join(ROOT, d)).sort()) if (f.endsWith('.js')) arqs.push(path.join(d, f));
+  for (const d of ['.', 'tests', 'lenzi-ai', '.claude/agents']) for (const f of fs.readdirSync(path.join(ROOT, d)).sort()) if (/\.(js|html|md|json)$/.test(f) && f !== 'tasks.json' && f !== 'orcamento.json' && !(d === '.' && /^(LEIA-ME|CORRECOES|PROGRESSO|PESQUISA|TIMELINE|LENZIMAP_|GUIA)/.test(f))) arqs.push(path.join(d, f));
   for (const f of arqs) { h.update(f); h.update(fs.readFileSync(path.join(ROOT, f))); }
   return h.digest('hex');
 }
 function evidenciaValida(ev) {
-  const abs = path.resolve(ROOT, ev);
+  let abs = path.resolve(ROOT, ev);
   if (abs !== ROOT && !abs.startsWith(ROOT + path.sep)) return 'evidencia fora do repositorio: ' + ev;
   if (!fs.existsSync(abs)) return 'evidencia nao existe no disco: ' + ev;
+  abs = fs.realpathSync(abs); const raiz = fs.realpathSync(ROOT);
+  if (!abs.startsWith(raiz + path.sep)) return 'evidencia fora do repositorio (atalho): ' + ev;
   if (fs.statSync(abs).size === 0) return 'evidencia vazia: ' + ev;
   return null;
 }
