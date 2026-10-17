@@ -191,6 +191,14 @@ Na aba **3D** agora abre direto o modo fácil:
 3. **Paredes e objetos**: marque Fundo, Parede esquerda, Parede direita, Chão e Teto, escolha cor e imagem ou GIF de cada uma, e adicione objetos (um bichinho em GIF, por exemplo).
 Depois, **Aplicar na Timeline**. Os tipos de ilusão, câmera, luz e geometria do palco ficam em **Mostrar opções avançadas** (no fim do painel). A escolha fica guardada.
 
+### 1.0.26
+
+- Máscaras extras: em Superfície selecionada, **+ Máscara** cria uma máscara a mais (retângulo, círculo, triângulo, losango, hexágono ou estrela). Cada superfície pode ter várias. Cada uma tem olho (liga e desliga), **Inverter** (só o interior aparece), **feather** (borda suave) e **Apagar**.
+- Selecione o nome da máscara para ver os pontos azuis: arraste para mudar, duplo clique no ponto apaga, duplo clique no vazio adiciona. Ctrl+Z desfaz.
+- A máscara antiga da superfície continua igual. Projetos antigos (.mapa) abrem como antes.
+- Ainda não tem: curvas Bézier nos pontos (próximo passo), feather só para dentro ou só para fora.
+- Testes: Chromium (tests/t44.js) e Electron 33 real lendo os pixels da saída (tests/electron-mascaras.js). Não testado em Mac real, projetor ou cubo físico.
+
 ### 1.0.25
 
 - Saídas de emergência: menu novo "Projeção" com "Fechar a projeção" (Ctrl+Option+W) e "Sair do LenziMap" (Ctrl+Option+Q). Os dois atalhos funcionam mesmo com a projeção cobrindo a tela e sem foco no app.

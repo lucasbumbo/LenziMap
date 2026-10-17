@@ -2,7 +2,7 @@
 const {_electron}=(()=>{try{return require('playwright')}catch(e){return require('/opt/npm-tools/node_modules/playwright')}})();
 const path=require('path');
 let fails=0,n=0;const ok=(c,m)=>{n++;console.log(c?'PASS':'FAIL',m);if(!c)fails++;};
-const ELEC=process.env.ELECTRON_BIN||'/tmp/claude-0/el/node_modules/electron/dist/electron';
+const ELEC=process.env.ELECTRON_BIN||'/tmp/claude-0/el33/node_modules/electron/dist/electron';
 (async()=>{
  const app=await _electron.launch({executablePath:ELEC,args:['--no-sandbox','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader'].concat(process.env.PACKAGED?[]:[path.join(__dirname,'..')])});
  const win=await app.firstWindow();await win.waitForLoadState('load');await win.waitForTimeout(2500);

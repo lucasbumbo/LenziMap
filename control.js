@@ -230,6 +230,7 @@
       id: ++uid, key: o.key || Seq.nid('s'), name: o.name, tag: o.tag, type: o.type, src: o.src || null, path: o.path || null, test: !!o.test,
       w: o.w, h: o.h, q: o.q, text: o.text || null, fx: o.fx || null,
       mask: o.mask || [[0, 0], [1, 0], [1, 1], [0, 1]],
+      cuts: Array.isArray(o.cuts) ? JSON.parse(JSON.stringify(o.cuts)) : [],
       opacity: o.opacity == null ? 1 : o.opacity,
       visible: o.visible !== false, locked: !!o.locked, flipX: !!o.flipX, flipY: !!o.flipY, rot: o.rot || 0, extras: o.extras || [], selItem: o.selItem || null, pristine: o.pristine !== false,
       bright: o.bright == null ? 100 : o.bright, contrast: o.contrast == null ? 100 : o.contrast,
@@ -574,6 +575,14 @@
       pts.forEach(function (p, i) {
         overlay.appendChild(svgEl('rect', { x: p[0] - 6, y: p[1] - 6, width: 12, height: 12, 'class': 'h-mask', 'data-k': 'm', 'data-i': i, transform: 'rotate(45 ' + p[0] + ' ' + p[1] + ')' }));
       });
+      var cs = selCut(s);
+      if (cs) {
+        var cp = cs.pts.map(function (m) { return M.proj(H, m[0] * s.w, m[1] * s.h); });
+        overlay.appendChild(svgEl('polygon', { points: cp.map(function (p) { return p[0] + ',' + p[1]; }).join(' '), 'class': 'm-poly cut' }));
+        cp.forEach(function (p, i) {
+          overlay.appendChild(svgEl('circle', { cx: p[0], cy: p[1], r: 7, 'class': 'h-cutpt', 'data-k': 'mc', 'data-i': i }));
+        });
+      }
     }
   }
 
@@ -886,6 +895,7 @@
 
   function syncControls() {
     var s = sel();
+    renderCutsSoon();
     ['n-x', 'n-y', 'n-w', 'n-h', 'n-a', 'radius', 'feather', 'motion', 'motion-amt', 'm-xform', 'opacity', 'bright', 'contrast', 'sat', 'hue', 'cycle', 'blur', 'btn-invert', 'btn-mono', 'm-mesh', 'mesh-n', 'mesh-reset', 'mesh-off', 'audio-amt', 'audio-to', 'shape-pick', 'speed', 'reset-corners', 'reset-mask', 'm-corners', 'm-mask',
       'layer-name', 'btn-lock', 'btn-solo', 'btn-dup', 'btn-flipx', 'btn-flipy', 'btn-rot90', 'btn-rotl', 'btn-rotr', 'rot-jog', 'btn-rot-m1', 'btn-rot-p1', 'btn-blend', 'btn-scover', 'aspect'].forEach(function (id) { $(id).disabled = !s; });
     setPressed($('m-corners'), state.mode === 'corners');
@@ -1017,6 +1027,82 @@
     var u = M.unproj(inv, x, y);
     return [clamp(u[0] / s.w, 0, 1), clamp(u[1] / s.h, 0, 1)];
   }
+  // Máscaras extras (s.cuts)
+  function selCut(s) {
+    if (!s || !s.cuts || !state.cutSel) return null;
+    for (var i = 0; i < s.cuts.length; i++) if (s.cuts[i].id === state.cutSel) return s.cuts[i];
+    return null;
+  }
+  function addCut(kind) {
+    var s = sel();
+    if (!s || isLocked(s)) return null;
+    var poly = shapePoly(kind || 'rect', s.w, s.h);
+    if (!poly) return null;
+    checkpoint();
+    var pts = poly.map(function (p) { return [0.5 + (p[0] - 0.5) * 0.5, 0.5 + (p[1] - 0.5) * 0.5]; });
+    var n = (s.cuts || []).length + 1, c = { id: 'c' + Date.now().toString(36) + n, name: 'Máscara ' + n, on: true, inv: false, f: 0, pts: pts };
+    s.cuts = (s.cuts || []).concat([c]);
+    state.cutSel = c.id; state.mode = 'mask';
+    refresh(); renderCuts(); syncControls();
+    say('Máscara extra criada. Arraste os pontos azuis; duplo clique no ponto apaga, duplo clique no vazio adiciona.');
+    return c;
+  }
+  function cutById(id) {
+    var s = sel(), i;
+    if (!s || !s.cuts) return null;
+    for (i = 0; i < s.cuts.length; i++) if (s.cuts[i].id === id) return { s: s, c: s.cuts[i] };
+    return null;
+  }
+  function renderCuts() {
+    var box = $('cut-list'), s = sel();
+    if (!box) return;
+    box.innerHTML = '';
+    if (!s || !s.cuts || !s.cuts.length) return;
+    s.cuts.forEach(function (c0) {
+      var id = c0.id;
+      var row = document.createElement('div'); row.className = 'cut-row' + (state.cutSel === id ? ' sel' : ''); row.dataset.cut = id;
+      var on = document.createElement('input'); on.type = 'checkbox'; on.checked = c0.on !== false; on.id = 'cut-on-' + id; on.title = 'Ligar ou desligar'; on.setAttribute('aria-label', 'Ligar ' + c0.name);
+      on.addEventListener('change', function () { var r = cutById(id); if (!r) return; checkpoint(); r.c.on = on.checked; refresh(); });
+      var nm = document.createElement('button'); nm.type = 'button'; nm.className = 'btn small'; nm.id = 'cut-sel-' + id; nm.textContent = c0.name;
+      nm.addEventListener('click', function () { state.cutSel = id; state.mode = 'mask'; renderOverlay(); renderCuts(); syncControls(); });
+      var lbi = document.createElement('label'); var inv = document.createElement('input'); inv.type = 'checkbox'; inv.checked = !!c0.inv; inv.id = 'cut-inv-' + id;
+      inv.addEventListener('change', function () { var r = cutById(id); if (!r) return; checkpoint(); r.c.inv = inv.checked; refresh(); });
+      lbi.appendChild(inv); lbi.appendChild(document.createTextNode(' Inverter'));
+      var f = document.createElement('input'); f.type = 'range'; f.min = 0; f.max = 40; f.step = 1; f.value = c0.f || 0; f.id = 'cut-f-' + id; f.title = 'Suavizar a borda (feather)'; f.setAttribute('aria-label', 'Feather ' + c0.name);
+      f.addEventListener('pointerdown', function () { checkpoint(); });
+      f.addEventListener('input', function () { var r = cutById(id); if (!r) return; r.c.f = +f.value; refresh(); });
+      var del = document.createElement('button'); del.type = 'button'; del.className = 'btn small'; del.id = 'cut-del-' + id; del.textContent = 'Apagar'; del.setAttribute('aria-label', 'Apagar ' + c0.name);
+      del.addEventListener('click', function () { var r = cutById(id); if (!r) return; checkpoint(); r.s.cuts = r.s.cuts.filter(function (z) { return z.id !== id; }); if (state.cutSel === id) state.cutSel = null; refresh(); renderCuts(); });
+      [on, nm, lbi, f, del].forEach(function (e) { row.appendChild(e); });
+      box.appendChild(row);
+    });
+  }
+  var cutsSig = '';
+  function renderCutsSoon() { var s = sel(), sg = (s ? s.key : '') + '|' + (state.cutSel || '') + '|' + JSON.stringify((s && s.cuts || []).map(function (z) { return [z.id, z.name, z.on, z.inv, z.f]; })); if (sg !== cutsSig) { cutsSig = sg; var ae = document.activeElement; if (!(ae && ae.type === 'range' && ae.closest && ae.closest('#cut-list'))) renderCuts(); } }
+  function addCutPt(s, c, x, y) {
+    var u = maskPoint(s, x, y);
+    if (!u) return;
+    checkpoint();
+    var best = 0, bd = Infinity, n = c.pts.length;
+    for (var i = 0; i < n; i++) {
+      var a = c.pts[i], b = c.pts[(i + 1) % n];
+      var ax = a[0] * s.w, ay = a[1] * s.h, bx = b[0] * s.w, by = b[1] * s.h, qx = u[0] * s.w, qy = u[1] * s.h;
+      var dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy;
+      var t = l2 ? clamp(((qx - ax) * dx + (qy - ay) * dy) / l2, 0, 1) : 0;
+      var d = Math.hypot(qx - (ax + t * dx), qy - (ay + t * dy));
+      if (d < bd) { bd = d; best = i; }
+    }
+    c.pts.splice(best + 1, 0, u);
+    refresh();
+  }
+  function removeCutPt(c, i) {
+    if (c.pts.length <= 3) { say('A máscara precisa de pelo menos 3 pontos.'); return; }
+    checkpoint();
+    c.pts.splice(i, 1);
+    refresh();
+  }
+  window.__cuts = { add: addCut, sel: function () { return selCut(sel()); } };
+
   function addMaskPt(s, x, y) {
     var u = maskPoint(s, x, y);
     if (!u) return;
@@ -1098,13 +1184,18 @@
     } else if (kind === 'c' && s && !isLocked(s)) {
       checkpoint(); s.pristine = false;
       drag = { type: 'corner', i: +e.target.getAttribute('data-i') };
+    } else if (kind === 'mc' && s && !isLocked(s) && selCut(s)) {
+      var mci = +e.target.getAttribute('data-i');
+      if (dbl) { removeCutPt(selCut(s), mci); last.t = 0; return; }
+      checkpoint();
+      drag = { type: 'mcut', i: mci, id: state.cutSel };
     } else if (kind === 'm' && s && !isLocked(s)) {
       var mi = +e.target.getAttribute('data-i');
       if (dbl) { removeMaskPt(s, mi); last.t = 0; return; }
       checkpoint();
       drag = { type: 'mask', i: mi };
     } else {
-      if (s && !isLocked(s) && state.mode === 'mask' && dbl && insidePoly(px(s), [x, y])) { addMaskPt(s, x, y); last.t = 0; return; }
+      if (s && !isLocked(s) && state.mode === 'mask' && dbl && insidePoly(px(s), [x, y])) { var cc0 = selCut(s); if (cc0) addCutPt(s, cc0, x, y); else addMaskPt(s, x, y); last.t = 0; return; }
       var hit = hitSurface(x, y);
       if (hit) {
         if (hit.id !== state.sel) select(hit.id);
@@ -1190,6 +1281,9 @@
     } else if (drag.type === 'mask') {
       var u = maskPoint(s, x, y);
       if (u) s.mask[drag.i] = u;
+    } else if (drag.type === 'mcut') {
+      var cu = selCut(s), u2 = maskPoint(s, x, y);
+      if (cu && u2) cu.pts[drag.i] = u2;
     }
     refresh();
   });
@@ -1450,6 +1544,7 @@
     s.q = fitQ(s.w / s.h, 0);
     refresh();
   });
+  $('cut-add').addEventListener('click', function () { addCut($('cut-shape').value); });
   $('reset-mask').addEventListener('click', function () {
     var s = sel();
     if (!s) return;
@@ -1776,7 +1871,7 @@
   api.onResend(function () { push(); });
 
   // Projetos
-  var SAVE_KEYS = ['key', 'name', 'tag', 'type', 'w', 'h', 'q', 'mask', 'opacity', 'pristine',
+  var SAVE_KEYS = ['key', 'name', 'tag', 'type', 'w', 'h', 'q', 'mask', 'cuts', 'opacity', 'pristine',
     'visible', 'locked', 'flipX', 'flipY', 'rot', 'bright', 'contrast', 'blend',
     'sat', 'hue', 'blur', 'cycle', 'invert', 'mono', 'audio', 'audioTo', 'mesh', 'radius', 'feather', 'motion', 'motionAmt'];
   function surfaceToData(s) {

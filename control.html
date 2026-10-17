@@ -45,6 +45,11 @@ h2{font:500 11px/1 var(--font-mono);letter-spacing:.12em;text-transform:uppercas
 .h-xg{font:700 15px sans-serif;fill:#6a3df0;pointer-events:none;text-anchor:middle;dominant-baseline:central}
 .q-x{fill:none;stroke:#8c5cff;stroke-width:2}
 .h-mask{fill:#fff;stroke:var(--accent);stroke-width:2;cursor:grab}
+.m-poly.cut{fill:rgba(0,200,255,.16);stroke:#4cf}
+.h-cutpt{fill:#4cf;stroke:#fff;stroke-width:2;cursor:grab}
+#cut-list .cut-row{display:flex;gap:6px;align-items:center;margin:4px 0;flex-wrap:wrap}
+#cut-list .cut-row.sel{outline:1px solid #4cf;border-radius:6px;padding:2px}
+#cut-list .cut-row input[type=range]{flex:1 1 90px;min-width:70px}
 .badge{position:absolute;left:10px;top:10px;font:500 11px var(--font-mono);letter-spacing:.1em;text-transform:uppercase;color:#fff;background:rgba(255,79,163,.9);padding:4px 8px;border-radius:4px;pointer-events:none}
 
 .panel{min-height:0;min-width:0;overflow:auto;display:flex;flex-direction:column;gap:20px;padding:18px;background:var(--panel);border:1px solid var(--line);border-radius:8px}
@@ -577,6 +582,21 @@ kbd{font:600 12px var(--font-mono);background:var(--panel-2);border:1px solid va
           <option value="cross">Cruz</option>
         </select>
       </label>
+      <div class="field" id="cuts-box">
+        <span>Máscaras extras (recortam a superfície)</span>
+        <div class="row">
+          <select id="cut-shape" aria-label="Forma da nova máscara">
+            <option value="rect">Retângulo</option>
+            <option value="circle">Círculo</option>
+            <option value="triangle">Triângulo</option>
+            <option value="diamond">Losango</option>
+            <option value="hexagon">Hexágono</option>
+            <option value="star">Estrela</option>
+          </select>
+          <button id="cut-add" class="btn small" type="button">+ Máscara</button>
+        </div>
+        <div id="cut-list"></div>
+      </div>
       <p id="mode-hint" class="hint"></p>
 
       <div class="sub">

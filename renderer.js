@@ -60,6 +60,42 @@
     return true;
   }
 
+  // Máscaras extras por superfície (s.cuts): cada uma recorta (ou, invertida, mantém só o seu interior), com feather.
+  // Vira uma máscara de alfa pequena (cache por assinatura) usada tanto no modo DOM (mask-image) quanto na malha (destination-in).
+  function activeCuts(s) {
+    var a = [], l = s && s.cuts || [], i;
+    for (i = 0; i < l.length; i++) if (l[i] && l[i].on !== false && l[i].pts && l[i].pts.length >= 3) a.push(l[i]);
+    return a;
+  }
+  var cutCache = {};
+  function cutMask(s) {
+    var cuts = activeCuts(s);
+    if (!cuts.length || !s.w || !s.h) return null;
+    var sig = s.w + 'x' + s.h + JSON.stringify(cuts.map(function (c) { return [c.pts, !!c.inv, c.f || 0]; }));
+    var hit = cutCache[s.key];
+    if (hit && hit.sig === sig) return hit;
+    var sc = Math.min(1, 800 / Math.max(s.w, s.h)), w = Math.max(2, Math.round(s.w * sc)), h = Math.max(2, Math.round(s.h * sc));
+    var cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+    var c = cv.getContext('2d');
+    c.fillStyle = '#000'; c.fillRect(0, 0, w, h);
+    cuts.forEach(function (ct) {
+      var t = document.createElement('canvas'); t.width = w; t.height = h;
+      var x = t.getContext('2d'), blur = Math.min(w, h) * Math.max(0, Math.min(60, ct.f || 0)) / 100 * 0.5;
+      x.fillStyle = '#000';
+      if (blur > 0.5) { x.shadowColor = '#000'; x.shadowBlur = blur; x.shadowOffsetX = w * 3; x.translate(-w * 3, 0); }
+      x.beginPath();
+      ct.pts.forEach(function (p, k) { if (k) x.lineTo(p[0] * w, p[1] * h); else x.moveTo(p[0] * w, p[1] * h); });
+      x.closePath(); x.fill();
+      c.globalCompositeOperation = ct.inv ? 'destination-in' : 'destination-out';
+      c.drawImage(t, 0, 0);
+    });
+    c.globalCompositeOperation = 'source-over';
+    var rec = { sig: sig, canvas: cv, url: cv.toDataURL('image/png') };
+    cutCache[s.key] = rec;
+    return rec;
+  }
+  root.RendererCuts = { activeCuts: activeCuts, cutMask: cutMask };
+
   function hexToRgb(hex) {
     var h = String(hex || '#ffffff').replace('#', '');
     if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
@@ -524,6 +560,8 @@
       } catch (err) {}
     }
     c2.restore();
+    var cm0 = cutMask(s);
+    if (cm0) { c2.save(); c2.globalCompositeOperation = 'destination-in'; c2.globalAlpha = 1; c2.drawImage(cm0.canvas, 0, 0, s.w, s.h); c2.restore(); }
     if (s.feather > 0) {
       var fp = Math.max(1, Math.min(s.w, s.h) * s.feather / 100 * 0.5);
       c2.save(); c2.globalCompositeOperation = 'destination-in'; c2.globalAlpha = 1;
@@ -719,7 +757,7 @@
         el.style.transform = 'none'; el.style.clipPath = 'none';
         el.style.background = '';
         el.style.borderRadius = ''; el.style.overflow = '';
-        el.style.webkitMaskImage = ''; el.style.maskImage = '';
+        el.style.webkitMaskImage = ''; el.style.maskImage = ''; rec.fmStr = null;
       } else {
         el.style.width = s.w + 'px'; el.style.height = s.h + 'px';
         if (W && H) {
@@ -735,9 +773,14 @@
         el.style.background = s.cover ? '#000' : '';
         el.style.borderRadius = s.radius > 0 ? (Math.min(s.w, s.h) * s.radius / 100) + 'px' : '';
         el.style.overflow = s.radius > 0 ? 'hidden' : '';
-        var fm = featherMask(s);
-        el.style.webkitMaskImage = fm; el.style.maskImage = fm;
-        el.style.webkitMaskComposite = fm ? 'source-in' : ''; el.style.maskComposite = fm ? 'intersect' : '';
+        var fm = featherMask(s), cmk = cutMask(s);
+        if (cmk) fm = (fm ? fm + ',' : '') + 'url(' + cmk.url + ')';
+        if (rec.fmStr !== fm) {
+          rec.fmStr = fm;
+          el.style.webkitMaskImage = fm; el.style.maskImage = fm;
+          el.style.webkitMaskComposite = fm ? 'source-in' : ''; el.style.maskComposite = fm ? 'intersect' : '';
+          el.style.webkitMaskSize = fm ? '100% 100%' : ''; el.style.maskSize = fm ? '100% 100%' : '';
+        }
       }
       
       el.style.mixBlendMode = s.blend === 'screen' ? 'screen' : 'normal';
