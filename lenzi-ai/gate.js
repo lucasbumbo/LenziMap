@@ -17,7 +17,7 @@ run('ledger', process.execPath, ['tests/ledger-test.js']);
 for (const t of ['unit', 'updater-core', 'layout-core', 'media-core', 'keyframe-core', 'timeline-edit-core', 'package-check', 'hierarchy-core', 'compound-core', 'viewer-core', 'effects-core', 'illusion-core'])
   run('teste ' + t, process.execPath, [t + '.js'], path.join(ROOT, 'tests'));
 const ok = checks.every(c => c.ok);
-const rel = { em: new Date().toISOString(), ok, total: checks.length, falhas: checks.filter(c => !c.ok), checks };
+const rel = { em: new Date().toISOString(), hash: require('./ledger.js').hashFontes(), ok, total: checks.length, falhas: checks.filter(c => !c.ok), checks };
 fs.mkdirSync(path.join(__dirname, 'evidencias'), { recursive: true });
 fs.writeFileSync(path.join(__dirname, 'evidencias', 'gate-ultimo.json'), JSON.stringify(rel, null, 2));
 console.log(ok ? `PORTAO VERDE (${checks.length} verificacoes)` : `PORTAO VERMELHO: ${rel.falhas.map(f => f.nome).join(', ')}`);

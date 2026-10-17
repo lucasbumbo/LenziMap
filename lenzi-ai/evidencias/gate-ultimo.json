@@ -1,181 +1,192 @@
 {
-  "em": "2026-10-17T18:12:40.960Z",
-  "ok": true,
+  "em": "2026-10-17T18:19:47.071Z",
+  "hash": "733e73c714331d5d6397d25af978f3a9b5e0d68f38422782cdce6d8760c31f4b",
+  "ok": false,
   "total": 47,
-  "falhas": [],
+  "falhas": [
+    {
+      "nome": "ledger",
+      "ok": false,
+      "ms": 75,
+      "resumo": [
+        "FAIL auditor que mexeu na tarefa nao a aprova",
+        "FAIL total 1"
+      ]
+    }
+  ],
   "checks": [
     {
       "nome": "sintaxe compound-core.js",
       "ok": true,
-      "ms": 37,
+      "ms": 29,
       "resumo": []
     },
     {
       "nome": "sintaxe control.js",
       "ok": true,
-      "ms": 30,
+      "ms": 29,
       "resumo": []
     },
     {
       "nome": "sintaxe effects-core.js",
       "ok": true,
-      "ms": 26,
+      "ms": 28,
       "resumo": []
     },
     {
       "nome": "sintaxe effects-dom.js",
       "ok": true,
-      "ms": 25,
+      "ms": 31,
       "resumo": []
     },
     {
       "nome": "sintaxe hierarchy-core.js",
       "ok": true,
-      "ms": 24,
+      "ms": 31,
       "resumo": []
     },
     {
       "nome": "sintaxe hierarchy-ui.js",
       "ok": true,
-      "ms": 24,
+      "ms": 30,
       "resumo": []
     },
     {
       "nome": "sintaxe illusion-core.js",
       "ok": true,
-      "ms": 28,
+      "ms": 35,
       "resumo": []
     },
     {
       "nome": "sintaxe illusion-gl.js",
       "ok": true,
-      "ms": 28,
+      "ms": 27,
       "resumo": []
     },
     {
       "nome": "sintaxe illusion-timeline.js",
       "ok": true,
-      "ms": 24,
+      "ms": 28,
       "resumo": []
     },
     {
       "nome": "sintaxe illusion-ui.js",
       "ok": true,
-      "ms": 26,
+      "ms": 32,
       "resumo": []
     },
     {
       "nome": "sintaxe keyframe-core.js",
       "ok": true,
-      "ms": 25,
+      "ms": 27,
       "resumo": []
     },
     {
       "nome": "sintaxe keyframe-ui.js",
       "ok": true,
-      "ms": 36,
+      "ms": 30,
       "resumo": []
     },
     {
       "nome": "sintaxe layout-core.js",
       "ok": true,
-      "ms": 32,
+      "ms": 29,
       "resumo": []
     },
     {
       "nome": "sintaxe layout-ui.js",
       "ok": true,
-      "ms": 31,
+      "ms": 28,
       "resumo": []
     },
     {
       "nome": "sintaxe main.js",
       "ok": true,
-      "ms": 29,
+      "ms": 27,
       "resumo": []
     },
     {
       "nome": "sintaxe media-browser.js",
       "ok": true,
-      "ms": 26,
+      "ms": 25,
       "resumo": []
     },
     {
       "nome": "sintaxe media-core.js",
       "ok": true,
-      "ms": 29,
+      "ms": 26,
       "resumo": []
     },
     {
       "nome": "sintaxe migrate-data.js",
       "ok": true,
-      "ms": 32,
+      "ms": 26,
       "resumo": []
     },
     {
       "nome": "sintaxe output.js",
       "ok": true,
-      "ms": 32,
+      "ms": 26,
       "resumo": []
     },
     {
       "nome": "sintaxe preload.js",
       "ok": true,
-      "ms": 38,
+      "ms": 34,
       "resumo": []
     },
     {
       "nome": "sintaxe renderer.js",
       "ok": true,
-      "ms": 35,
+      "ms": 36,
       "resumo": []
     },
     {
       "nome": "sintaxe sequence-player.js",
       "ok": true,
-      "ms": 26,
+      "ms": 32,
       "resumo": []
     },
     {
       "nome": "sintaxe sequence.js",
       "ok": true,
-      "ms": 27,
+      "ms": 29,
       "resumo": []
     },
     {
       "nome": "sintaxe silhouette.js",
       "ok": true,
-      "ms": 29,
+      "ms": 27,
       "resumo": []
     },
     {
       "nome": "sintaxe textures-extra.js",
       "ok": true,
-      "ms": 38,
+      "ms": 27,
       "resumo": []
     },
     {
       "nome": "sintaxe textures-extra2.js",
       "ok": true,
-      "ms": 38,
+      "ms": 29,
       "resumo": []
     },
     {
       "nome": "sintaxe textures.js",
       "ok": true,
-      "ms": 30,
+      "ms": 26,
       "resumo": []
     },
     {
       "nome": "sintaxe timeline-edit-core.js",
       "ok": true,
-      "ms": 29,
+      "ms": 33,
       "resumo": []
     },
     {
       "nome": "sintaxe timeline-ui.js",
       "ok": true,
-      "ms": 33,
+      "ms": 31,
       "resumo": []
     },
     {
@@ -187,13 +198,13 @@
     {
       "nome": "sintaxe updater-core.js",
       "ok": true,
-      "ms": 33,
+      "ms": 27,
       "resumo": []
     },
     {
       "nome": "sintaxe updater-ui.js",
       "ok": true,
-      "ms": 28,
+      "ms": 25,
       "resumo": []
     },
     {
@@ -205,85 +216,88 @@
     {
       "nome": "sintaxe viewer-core.js",
       "ok": true,
-      "ms": 28,
+      "ms": 27,
       "resumo": []
     },
     {
       "nome": "ledger",
-      "ok": true,
-      "ms": 46,
-      "resumo": []
+      "ok": false,
+      "ms": 75,
+      "resumo": [
+        "FAIL auditor que mexeu na tarefa nao a aprova",
+        "FAIL total 1"
+      ]
     },
     {
       "nome": "teste unit",
       "ok": true,
-      "ms": 101,
+      "ms": 53,
       "resumo": []
     },
     {
       "nome": "teste updater-core",
       "ok": true,
-      "ms": 116,
+      "ms": 110,
       "resumo": []
     },
     {
       "nome": "teste layout-core",
       "ok": true,
-      "ms": 39,
+      "ms": 38,
       "resumo": []
     },
     {
       "nome": "teste media-core",
       "ok": true,
-      "ms": 80,
+      "ms": 55,
       "resumo": []
     },
     {
       "nome": "teste keyframe-core",
       "ok": true,
-      "ms": 63,
+      "ms": 55,
       "resumo": []
     },
     {
       "nome": "teste timeline-edit-core",
       "ok": true,
-      "ms": 59,
+      "ms": 63,
       "resumo": []
     },
     {
       "nome": "teste package-check",
       "ok": true,
-      "ms": 52,
+      "ms": 53,
       "resumo": []
     },
     {
       "nome": "teste hierarchy-core",
       "ok": true,
-      "ms": 56,
+      "ms": 54,
       "resumo": []
     },
     {
       "nome": "teste compound-core",
       "ok": true,
-      "ms": 82,
+      "ms": 52,
       "resumo": []
     },
     {
       "nome": "teste viewer-core",
       "ok": true,
-      "ms": 47,
+      "ms": 66,
       "resumo": []
     },
     {
       "nome": "teste effects-core",
       "ok": true,
-      "ms": 55,
+      "ms": 62,
       "resumo": []
     },
     {
       "nome": "teste illusion-core",
       "ok": true,
-      "ms": 72,
+      "ms": 59,
       "resumo": []
     }
   ]

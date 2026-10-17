@@ -2,7 +2,23 @@
 // LENZI AI: registro de tarefas com maquina de estados. Sem dependencias.
 // Regras: (1) quem desenvolveu nao pode auditar; (2) aprovar exige evidencia
 // (arquivo existente) e portao de qualidade verde; (3) toda mudanca fica no historico.
-const fs = require('fs'), path = require('path');
+const fs = require('fs'), path = require('path'), crypto = require('crypto');
+const ROOT = path.resolve(__dirname, '..');
+// Impressao digital do codigo: o portao so vale para o codigo exato em que rodou.
+function hashFontes() {
+  const h = crypto.createHash('sha256');
+  const arqs = [];
+  for (const d of ['.', 'tests']) for (const f of fs.readdirSync(path.join(ROOT, d)).sort()) if (f.endsWith('.js')) arqs.push(path.join(d, f));
+  for (const f of arqs) { h.update(f); h.update(fs.readFileSync(path.join(ROOT, f))); }
+  return h.digest('hex');
+}
+function evidenciaValida(ev) {
+  const abs = path.resolve(ROOT, ev);
+  if (abs !== ROOT && !abs.startsWith(ROOT + path.sep)) return 'evidencia fora do repositorio: ' + ev;
+  if (!fs.existsSync(abs)) return 'evidencia nao existe no disco: ' + ev;
+  if (fs.statSync(abs).size === 0) return 'evidencia vazia: ' + ev;
+  return null;
+}
 const DIR = process.env.LENZI_AI_DIR || __dirname;
 const FILE = path.join(DIR, 'tasks.json');
 const USAGE = path.join(DIR, 'usage.jsonl');
@@ -24,7 +40,7 @@ function now() { return new Date().toISOString(); }
 function get(db, id) { const t = db.tasks.find(x => x.id === id); if (!t) throw new Error('tarefa nao existe: ' + id); return t; }
 function add(titulo, dono) {
   if (!titulo) throw new Error('titulo obrigatorio');
-  const db = load(); const id = 'T' + String(db.tasks.length + 1).padStart(3, '0');
+  const db = load(); const id = 'T' + String(db.tasks.reduce((m, x) => Math.max(m, parseInt(x.id.slice(1), 10)), 0) + 1).padStart(3, '0');
   db.tasks.push({ id, titulo, dono: dono || null, estado: 'PENDENTE', evidencias: [], historico: [{ em: now(), de: null, para: 'PENDENTE', por: dono || 'sistema' }] });
   save(db); return id;
 }
@@ -39,14 +55,16 @@ function move(id, para, por, opts) {
   if (para === 'EM_AUDITORIA' && !t.evidencias.length) throw new Error('auditoria exige evidencia registrada (use: evid)');
   if (para === 'APROVADO' || para === 'REPROVADO') {
     if (por === t.dono) throw new Error('o desenvolvedor nao pode auditar o proprio trabalho: ' + por);
-    if (!/audit/i.test(por)) throw new Error('apenas um auditor pode aprovar ou reprovar (nome deve conter "audit")');
+    if (!/^auditor(-[a-z0-9]+)*$/.test(por)) throw new Error('apenas um auditor pode aprovar ou reprovar (nome deve ser auditor ou auditor-<nome>)');
+    if (t.historico.some(h => h.por === por)) throw new Error('quem mexeu na tarefa antes nao pode auditar: ' + por);
   }
   if (para === 'APROVADO') {
-    for (const ev of t.evidencias) { if (!fs.existsSync(path.resolve(DIR, '..', ev))) throw new Error('evidencia nao existe no disco: ' + ev); }
+    for (const ev of t.evidencias) { const e = evidenciaValida(ev); if (e) throw new Error(e); }
     const g = path.join(DIR, 'evidencias', 'gate-ultimo.json');
     if (!fs.existsSync(g)) throw new Error('portao de qualidade nunca foi executado');
     const r = JSON.parse(fs.readFileSync(g, 'utf8'));
     if (!r.ok) throw new Error('portao de qualidade esta vermelho; aprovacao negada');
+    if (r.hash !== hashFontes()) throw new Error('portao desatualizado: o codigo mudou depois dele; rode o portao de novo');
   }
   if (para === 'BLOQUEADO' && !opts.motivo) throw new Error('bloqueio exige motivo');
   t.historico.push({ em: now(), de: t.estado, para, por, motivo: opts.motivo || undefined });
@@ -54,7 +72,7 @@ function move(id, para, por, opts) {
 }
 function evid(id, arquivo) {
   const db = load(), t = get(db, id);
-  if (!fs.existsSync(path.resolve(DIR, '..', arquivo))) throw new Error('arquivo nao existe: ' + arquivo);
+  const e = evidenciaValida(arquivo); if (e) throw new Error(e);
   t.evidencias.push(arquivo); save(db);
 }
 // Registro de uso e orcamento (tokens). Limite por tarefa e global; passou, bloqueia.
@@ -74,7 +92,7 @@ function orcamento(tarefa) {
   const usadoT = t.por[tarefa] || 0;
   return { ok: usadoT < lim.porTarefa && t.total < lim.global, usadoTarefa: usadoT, usadoGlobal: t.total, limiteTarefa: lim.porTarefa, limiteGlobal: lim.global };
 }
-module.exports = { add, move, evid, uso, totais, orcamento, load, ESTADOS, PERMITE };
+module.exports = { hashFontes, add, move, evid, uso, totais, orcamento, load, ESTADOS, PERMITE };
 if (require.main === module) {
   const [cmd, ...a] = process.argv.slice(2);
   try {
