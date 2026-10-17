@@ -1,5 +1,5 @@
 {
-  "em": "2026-10-17T18:19:55.310Z",
+  "em": "2026-10-17T18:20:03.538Z",
   "hash": "49858a527479bdde28a54b65f3708d33492bd8913f638e8198ef72bd16f28726",
   "ok": true,
   "total": 47,
@@ -8,97 +8,97 @@
     {
       "nome": "sintaxe compound-core.js",
       "ok": true,
-      "ms": 38,
+      "ms": 39,
       "resumo": []
     },
     {
       "nome": "sintaxe control.js",
       "ok": true,
-      "ms": 44,
+      "ms": 41,
       "resumo": []
     },
     {
       "nome": "sintaxe effects-core.js",
       "ok": true,
-      "ms": 39,
+      "ms": 37,
       "resumo": []
     },
     {
       "nome": "sintaxe effects-dom.js",
       "ok": true,
-      "ms": 37,
+      "ms": 34,
       "resumo": []
     },
     {
       "nome": "sintaxe hierarchy-core.js",
       "ok": true,
-      "ms": 32,
+      "ms": 34,
       "resumo": []
     },
     {
       "nome": "sintaxe hierarchy-ui.js",
       "ok": true,
-      "ms": 30,
+      "ms": 35,
       "resumo": []
     },
     {
       "nome": "sintaxe illusion-core.js",
       "ok": true,
-      "ms": 42,
+      "ms": 36,
       "resumo": []
     },
     {
       "nome": "sintaxe illusion-gl.js",
       "ok": true,
-      "ms": 40,
+      "ms": 30,
       "resumo": []
     },
     {
       "nome": "sintaxe illusion-timeline.js",
       "ok": true,
-      "ms": 31,
+      "ms": 29,
       "resumo": []
     },
     {
       "nome": "sintaxe illusion-ui.js",
       "ok": true,
-      "ms": 48,
+      "ms": 30,
       "resumo": []
     },
     {
       "nome": "sintaxe keyframe-core.js",
       "ok": true,
-      "ms": 42,
+      "ms": 27,
       "resumo": []
     },
     {
       "nome": "sintaxe keyframe-ui.js",
       "ok": true,
-      "ms": 27,
+      "ms": 35,
       "resumo": []
     },
     {
       "nome": "sintaxe layout-core.js",
       "ok": true,
-      "ms": 32,
+      "ms": 33,
       "resumo": []
     },
     {
       "nome": "sintaxe layout-ui.js",
       "ok": true,
-      "ms": 30,
+      "ms": 34,
       "resumo": []
     },
     {
       "nome": "sintaxe main.js",
       "ok": true,
-      "ms": 27,
+      "ms": 33,
       "resumo": []
     },
     {
       "nome": "sintaxe media-browser.js",
       "ok": true,
-      "ms": 25,
+      "ms": 34,
       "resumo": []
     },
     {
@@ -110,25 +110,25 @@
     {
       "nome": "sintaxe migrate-data.js",
       "ok": true,
-      "ms": 24,
+      "ms": 26,
       "resumo": []
     },
     {
       "nome": "sintaxe output.js",
       "ok": true,
-      "ms": 24,
+      "ms": 25,
       "resumo": []
     },
     {
       "nome": "sintaxe preload.js",
       "ok": true,
-      "ms": 24,
+      "ms": 26,
       "resumo": []
     },
     {
       "nome": "sintaxe renderer.js",
       "ok": true,
-      "ms": 26,
+      "ms": 27,
       "resumo": []
     },
     {
@@ -140,13 +140,13 @@
     {
       "nome": "sintaxe sequence.js",
       "ok": true,
-      "ms": 25,
+      "ms": 27,
       "resumo": []
     },
     {
       "nome": "sintaxe silhouette.js",
       "ok": true,
-      "ms": 27,
+      "ms": 25,
       "resumo": []
     },
     {
@@ -158,97 +158,97 @@
     {
       "nome": "sintaxe textures-extra2.js",
       "ok": true,
-      "ms": 25,
+      "ms": 44,
       "resumo": []
     },
     {
       "nome": "sintaxe textures.js",
       "ok": true,
-      "ms": 26,
+      "ms": 42,
       "resumo": []
     },
     {
       "nome": "sintaxe timeline-edit-core.js",
       "ok": true,
-      "ms": 24,
+      "ms": 35,
       "resumo": []
     },
     {
       "nome": "sintaxe timeline-ui.js",
       "ok": true,
-      "ms": 37,
+      "ms": 29,
       "resumo": []
     },
     {
       "nome": "sintaxe tl-menu.js",
       "ok": true,
-      "ms": 37,
+      "ms": 27,
       "resumo": []
     },
     {
       "nome": "sintaxe updater-core.js",
       "ok": true,
-      "ms": 38,
+      "ms": 26,
       "resumo": []
     },
     {
       "nome": "sintaxe updater-ui.js",
       "ok": true,
-      "ms": 34,
+      "ms": 25,
       "resumo": []
     },
     {
       "nome": "sintaxe updater.js",
       "ok": true,
-      "ms": 34,
+      "ms": 25,
       "resumo": []
     },
     {
       "nome": "sintaxe viewer-core.js",
       "ok": true,
-      "ms": 32,
+      "ms": 36,
       "resumo": []
     },
     {
       "nome": "ledger",
       "ok": true,
-      "ms": 70,
+      "ms": 84,
       "resumo": []
     },
     {
       "nome": "teste unit",
       "ok": true,
-      "ms": 65,
+      "ms": 69,
       "resumo": []
     },
     {
       "nome": "teste updater-core",
       "ok": true,
-      "ms": 112,
+      "ms": 114,
       "resumo": []
     },
     {
       "nome": "teste layout-core",
       "ok": true,
-      "ms": 41,
+      "ms": 39,
       "resumo": []
     },
     {
       "nome": "teste media-core",
       "ok": true,
-      "ms": 59,
+      "ms": 58,
       "resumo": []
     },
     {
       "nome": "teste keyframe-core",
       "ok": true,
-      "ms": 55,
+      "ms": 61,
       "resumo": []
     },
     {
       "nome": "teste timeline-edit-core",
       "ok": true,
-      "ms": 59,
+      "ms": 56,
       "resumo": []
     },
     {
@@ -260,31 +260,31 @@
     {
       "nome": "teste hierarchy-core",
       "ok": true,
-      "ms": 62,
+      "ms": 78,
       "resumo": []
     },
     {
       "nome": "teste compound-core",
       "ok": true,
-      "ms": 61,
+      "ms": 51,
       "resumo": []
     },
     {
       "nome": "teste viewer-core",
       "ok": true,
-      "ms": 44,
+      "ms": 45,
       "resumo": []
     },
     {
       "nome": "teste effects-core",
       "ok": true,
-      "ms": 60,
+      "ms": 46,
       "resumo": []
     },
     {
       "nome": "teste illusion-core",
       "ok": true,
-      "ms": 73,
+      "ms": 86,
       "resumo": []
     }
   ]
