@@ -83,3 +83,14 @@ face=(40,16,6,255);d.polygon([(W0*.33,W0*.50),(W0*.43,W0*.50),(W0*.38,W0*.40)],f
 d.polygon([(W0*.30,W0*.62),(W0*.70,W0*.62),(W0*.64,W0*.76),(W0*.56,W0*.70),(W0*.50,W0*.77),(W0*.44,W0*.70),(W0*.36,W0*.76)],fill=(255,205,70,255))
 im.resize((N,N),Image.LANCZOS).save('media/abobora.png')
 print('ok')
+# teto com vigas de madeira e teia (para o topo do cubo)
+im=new((44,30,40));d=ImageDraw.Draw(im)
+for i in range(0,N*S,N*S//6):
+    d.rectangle([i,0,i+N*S//16,N*S],fill=(86,56,38));d.rectangle([i+N*S//16-8,0,i+N*S//16,N*S],fill=(56,36,26))
+for j in range(0,N*S,N*S//4):
+    d.rectangle([0,j,N*S,j+N*S//28],fill=(98,64,44))
+for k in range(0,10):
+    d.arc([-N*S*.3,-N*S*.3,N*S*(.15+k*.04),N*S*(.15+k*.04)],0,90,fill=(215,215,225),width=3)
+for a in range(0,90,15):
+    x=N*S*.45*math.cos(math.radians(a));y=N*S*.45*math.sin(math.radians(a));d.line([(0,0),(x,y)],fill=(215,215,225),width=3)
+fin(im,'teto-vigas.png')

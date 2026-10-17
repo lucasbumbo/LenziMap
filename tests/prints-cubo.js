@@ -3,7 +3,7 @@ const {_electron}=(()=>{try{return require('playwright')}catch(e){return require
 const path=require('path'),fs=require('fs'),cp=require('child_process');
 let fails=0,n=0;const ok=(c,m)=>{n++;console.log(c?'PASS':'FAIL',m);if(!c)fails++;};
 const ELEC=process.env.ELECTRON_BIN||'/tmp/claude-0/el33/node_modules/electron/dist/electron';
-const P='/tmp/claude-0/amostra3/';fs.mkdirSync(P,{recursive:true});
+const J2=!process.env.J3,GRID=!!process.env.GRID,VY=+(process.env.VY||24),VZ=+(process.env.VZ||100),DEP=+(process.env.DEPTH||24);const P=process.env.OUT||(GRID?'/tmp/claude-0/amostra3g/':'/tmp/claude-0/amostra3/');fs.mkdirSync(P,{recursive:true});
 const M=path.join(__dirname,'amostra/media')+'/';
 (async()=>{
  cp.spawnSync('python3',[path.join(__dirname,'amostra/gerar-midias.py')],{cwd:path.join(__dirname,'amostra')});
@@ -20,14 +20,18 @@ const M=path.join(__dirname,'amostra/media')+'/';
   const free=ks.filter(k=>used.indexOf(k)<0);if(!c.faces.front)c.faces.front=free.shift();c.faces.right=free.shift();c.faces.top=free.shift();IllusionUI.render();});await win.waitForTimeout(800);
  const bound=await win.evaluate(()=>{const c=TimelineUI._h.tl.seq.stage.cubes[0];return ['front','right','top'].map(f=>!!c.faces[f])});console.log('faces ligadas',bound);ok(bound.every(Boolean),'frente, direita e topo ligadas a superficies');
  await jc('#il-modelo-rato');await win.waitForTimeout(2500);   // quina + topo + 2 paredes (mesma preparação de cubo); trocamos o conteúdo abaixo
- await win.evaluate(({M})=>{const U=IllusionUI.state.il.room,H=TimelineUI._h;
-  const md=(f,nm)=>({name:nm,path:M+f,src:H.toUrl(M+f)});
-  U.walls.back.media=md('parede-fundo-janela-lua.png','Parede - Janela com lua');U.walls.right.media=md('parede-direita-papel-quadros.png','Parede - Papel e quadros');U.walls.floor.media=md('piso-madeira.png','Piso - Madeira');
+ await win.evaluate(({M,GRID,J2,VY,VZ,DEP,LIBD})=>{const U=IllusionUI.state.il.room,H=TimelineUI._h;
+  const md=(f,nm)=>({name:nm,path:(GRID?LIBD:M)+f,src:H.toUrl((GRID?LIBD:M)+f)});
+  U.walls.back.media=md(GRID?'Parede - Grade branca.png':'parede-fundo-janela-lua.png','Parede fundo');U.walls.right.media=md(GRID?'Parede - Grade branca.png':'parede-direita-papel-quadros.png','Parede dir');U.walls.floor.media=md(GRID?'Piso - Xadrez preto e branco.png':'piso-madeira.png','Piso');
   const fy=U.sprites[0].y-6;
-  U.sprites=[{id:'fant',name:'Fantasma',x:-4.5,y:fy+7.5,z:-9,size:11,media:md('fantasma.png','Fantasma'),fx:''},{id:'abob',name:'Abóbora',x:-9,y:fy+2.8,z:-3,size:5.6,media:md('abobora.png','Abóbora'),fx:''}];
+  U.sprites=GRID?[]:[{id:'fant',name:'Fantasma',x:-3,y:fy+6.2,z:-10,size:11,media:md('fantasma.png','Fantasma'),fx:''},{id:'abob',name:'Abóbora',x:6,y:fy+3.2,z:-6,size:5.6,media:md('abobora.png','Abóbora'),fx:''}];
   const U2=IllusionUI.state.il;U2.light.ambient=0.95;U2.light.key=0.7;
-  const st0=H.tl.seq.stage;st0.viewer.pos=[0,38,100];IllusionUI.render();},{M});await win.waitForTimeout(1500);
+  if(J2){IllusionUI.state.il.room.join='front+right';IllusionUI.state.il.target.faces=['front','right'];}
+  const st0=H.tl.seq.stage;st0.viewer.pos=[0,VY,VZ];U2.params.depth=DEP;const hh=H.tl.seq.stage.cubes[0].size/2;if(!GRID){const fy2=J2?-hh:hh-DEP;U.sprites[0].y=fy2+6.2;U.sprites[1].y=fy2+3.2;}IllusionUI.render();},{M,GRID,J2,VY,VZ,DEP,LIBD:path.join(__dirname,'..','biblioteca')+'/'});await win.waitForTimeout(1500);
  await jc('#il-apply');await win.waitForTimeout(3500);
+ if(J2)await win.evaluate(({M})=>{const H=TimelineUI._h,Seq=H.Seq,sq=H.tl.seq,c=sq.stage.cubes[0],s=H.surfaces().map(z=>z.s).find(z=>z.key===c.faces.top);
+  const tr=Seq.addTrack(sq,'video',s.key,s.name);const a=Seq.addAsset(sq,{kind:'img',name:'teto-vigas.png',path:M+'teto-vigas.png'});a.src=H.toUrl(M+'teto-vigas.png');const cl=Seq.addClip(sq,tr.id,a,0,8);if(cl)cl.fit='fill';H.syncClock();H.renderAll();},{M});
+ await win.waitForTimeout(1500);
  const cfg=await win.evaluate(()=>{const C=IllusionCore,H=TimelineUI._h,st=H.tl.seq.stage,cu=st.cubes[0];
   const PW=1280,PH=1024,PROJ=st.projector.pos,PT=cu.pos,FOV=12*Math.PI/180;
   const sub=(a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]],dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2],cr=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],nm=a=>{const l=Math.hypot(a[0],a[1],a[2]);return a.map(v=>v/l)};
